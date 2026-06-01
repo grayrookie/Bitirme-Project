@@ -70,9 +70,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const exportDiv = document.createElement('div');
         exportDiv.className = 'export-container';
         exportDiv.innerHTML = `
-            <button class="btn-export" data-format="txt"><i class="fa-solid fa-file-lines"></i> TXT Dışa Aktar</button>
-            <button class="btn-export" data-format="csv"><i class="fa-solid fa-file-csv"></i> CSV Dışa Aktar</button>
-            <button class="btn-export" data-format="json"><i class="fa-solid fa-file-code"></i> JSON Dışa Aktar</button>
+            <button class="btn-export" data-format="txt"><i class="ti ti-file-text"></i> TXT Dışa Aktar</button>
+            <button class="btn-export" data-format="csv"><i class="ti ti-file-spreadsheet"></i> CSV Dışa Aktar</button>
+            <button class="btn-export" data-format="json"><i class="ti ti-file-code"></i> JSON Dışa Aktar</button>
         `;
         
         container.appendChild(exportDiv);
@@ -171,10 +171,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const d = document.createElement('div');
         if(!isHtml) {
             d.className = `log-line`;
-            let icon = 'fa-info-circle status-info';
-            if (type === 'success') icon = 'fa-check-circle status-up';
-            if (type === 'error') icon = 'fa-times-circle status-down';
-            d.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+            let icon = 'ti-info-circle status-info';
+            if (type === 'success') icon = 'ti-circle-check status-up';
+            if (type === 'error') icon = 'ti-circle-x status-down';
+            d.innerHTML = `<i class="ti ${icon}"></i> <span>${message}</span>`;
         } else d.innerHTML = message;
         c.appendChild(d);
         c.scrollTop = c.scrollHeight;
@@ -263,11 +263,72 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillText('AÇIK ORAN', centerX, centerY + 14);
     }
 
+    // --- LATENCY BAR CHART FOR STRESSTEST ---
+    function drawLatencyBarChart(canvasId, latencies) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        if (!latencies || latencies.length === 0) return;
+        
+        // Render simple bar graph representing response times
+        const maxVal = Math.max(...latencies, 100);
+        const padding = 15;
+        const width = canvas.width - 2 * padding;
+        const height = canvas.height - 2 * padding;
+        const barWidth = width / latencies.length;
+        
+        // Draw grid/background lines
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= 4; i++) {
+            const y = padding + (height / 4) * i;
+            ctx.beginPath();
+            ctx.moveTo(padding, y);
+            ctx.lineTo(canvas.width - padding, y);
+            ctx.stroke();
+        }
+        
+        // Draw latency bars
+        latencies.forEach((lat, index) => {
+            const barHeight = (lat / maxVal) * height;
+            const x = padding + index * barWidth;
+            const y = canvas.height - padding - barHeight;
+            
+            // Color based on latency severity
+            let color = 'rgba(0, 240, 255, 0.65)'; // Cyan
+            if (lat > 500.0) {
+                color = 'rgba(255, 0, 60, 0.85)'; // Red
+            } else if (lat > 300.0) {
+                color = 'rgba(234, 179, 8, 0.75)'; // Yellow
+            }
+            
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, Math.max(1, barWidth - 1), barHeight);
+        });
+
+        // Write max latency label
+        ctx.fillStyle = 'var(--text-secondary)';
+        ctx.font = '700 0.55rem "JetBrains Mono", monospace';
+        ctx.fillText(`MAKS: ${Math.round(maxVal)}ms`, padding, padding - 5);
+    }
+
+
     // 1. Ping
     document.getElementById('btn-ping').addEventListener('click', () => {
-        postApi('/api/scan/ping', {target: document.getElementById('ping-target').value.trim()}, 'btn-ping', 'ping-results', (data) => {
-            addLog('ping-results', `Hedef ${data.target} test edildi.`, 'info');
-            data.alive ? addLog('ping-results', 'Hedef ayakta (ALIVE).', 'success') : addLog('ping-results', 'Hedef Ulaşılamaz (DOWN).', 'error');
+        const targetVal = document.getElementById('ping-target').value.trim();
+        if(!targetVal) return;
+        
+        postApi('/api/scan/ping', {target: targetVal}, 'btn-ping', 'ping-results', (data) => {
+            if (data.output) {
+                addLog('ping-results', `<div style="background:rgba(0,0,0,0.5); padding:1rem; border-left:4px solid var(--accent-cyan); white-space:pre-wrap; font-family:'JetBrains Mono',monospace; font-size:0.88rem; line-height:1.6; margin-top:0.5rem; color:#e0e0e0;">${data.output}</div>`, 'none', true);
+            }
+            if (data.alive) {
+                addLog('ping-results', `Hedef ${data.target} ayakta (ALIVE).`, 'success');
+            } else {
+                addLog('ping-results', `Hedef ${data.target} ulaşılamaz (DOWN) veya ICMP paketleri engellendi.`, 'error');
+            }
             document.getElementById('btn-ai-ping').style.display = 'inline-flex';
         });
     });
@@ -286,7 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             addLog('port-results', `<b>${data.open_ports.length} Açık Port Bulundu:</b>`, 'success', true);
             data.open_ports.forEach(p => {
-                addLog('port-results', `<div class="port-card"><div><div class="port-number">PORT ${p.port}</div><div class="port-service">${p.service}</div></div><div class="status-open">AÇIK <i class="fa-solid fa-unlock"></i></div></div>`, 'none', true);
+                addLog('port-results', `<div class="port-card"><div><div class="port-number">PORT ${p.port}</div><div class="port-service">${p.service}</div></div><div class="status-open">AÇIK <i class="ti ti-lock-open"></i></div></div>`, 'none', true);
             });
             
             // Draw chart
@@ -335,7 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             background:rgba(0,240,255,0.04); border:1px solid rgba(0,240,255,0.15);
                             color:var(--text-secondary); font-size:0.83rem; line-height:1.6;">
                             <span style="color:var(--accent-cyan); font-weight:700; display:block; margin-bottom:0.3rem;">
-                                <i class="fa-solid fa-circle-info"></i> Bilgi Notu
+                                <i class="ti ti-info-circle"></i> Bilgi Notu
                             </span>
                             ${data.note}
                         </div>`, 'none', true);
@@ -348,7 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         background:rgba(234,179,8,0.04); border:1px solid rgba(234,179,8,0.25);
                         font-family:'JetBrains Mono',monospace; font-size:0.86rem; line-height:1.8; white-space:pre-wrap;">
                         <div style="color:#eab308; font-weight:800; font-size:0.9rem; margin-bottom:0.75rem; display:flex; align-items:center; gap:0.5rem;">
-                            <i class="fa-solid fa-shield-halved"></i> GÜVENLIK DUVARINDAN ENGELLENDİ — FİREWALL ANALİZ RAPORU
+                            <i class="ti ti-shield-check"></i> GÜVENLIK DUVANINDAN ENGELLENDİ — FİREWALL ANALİZ RAPORU
                         </div>
                         <span style="color:#fff;">${data.banner}</span>
                     </div>`, 'none', true);
@@ -401,13 +462,52 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 12. Email Sızıntı Kontrolü (Breach Checker)
+    const breachTypeSelect = document.getElementById('breach-type');
+    const breachTargetInput = document.getElementById('breach-target');
+    
+    if (breachTypeSelect && breachTargetInput) {
+        breachTypeSelect.addEventListener('change', () => {
+            if (breachTypeSelect.value === 'email') {
+                breachTargetInput.placeholder = 'Örn: eposta@gmail.com';
+                breachTargetInput.type = 'email';
+            } else {
+                breachTargetInput.placeholder = 'Örn: admin12345';
+                breachTargetInput.type = 'text';
+            }
+        });
+    }
+
     document.getElementById('btn-breach').addEventListener('click', () => {
         const targetVal = document.getElementById('breach-target').value.trim();
+        const targetType = document.getElementById('breach-type') ? document.getElementById('breach-type').value : 'email';
         if (!targetVal) return;
         
-        postApi('/api/osint/breach', {target: targetVal}, 'btn-breach', 'breach-results', (data) => {
+        const btnAiBreach = document.getElementById('btn-ai-breach');
+        if (btnAiBreach) btnAiBreach.style.display = 'none';
+        
+        if (targetType === 'email') {
+            const emailRegex = /^[\w\.-]+@[\w\.-]+\.\w+$/;
+            if (!emailRegex.test(targetVal)) {
+                const resultsContainer = document.getElementById('breach-results');
+                if (resultsContainer) {
+                    resultsContainer.innerHTML = '';
+                    resultsContainer.classList.remove('empty');
+                }
+                addLog('breach-results', `<div style="background:rgba(0,0,0,0.5); padding:1rem; border-left:4px solid var(--accent-red); white-space:pre-wrap; font-family:'JetBrains Mono',monospace; font-size:0.88rem; line-height:1.6; color:#f87171;">[-] Hata: Geçerli bir e-posta formatı girmediniz! (Örn: ad@domain.com)</div>`, 'none', true);
+                return;
+            }
+        }
+        
+        postApi('/api/osint/breach', {type: targetType, target: targetVal}, 'btn-breach', 'breach-results', (data) => {
             if (data.error) {
+                if (data.output) {
+                    addLog('breach-results', `<div style="background:rgba(0,0,0,0.5); padding:1rem; border-left:4px solid var(--accent-red); white-space:pre-wrap; font-family:'JetBrains Mono',monospace; font-size:0.88rem; line-height:1.6; color:#f87171;">${data.output}</div>`, 'none', true);
+                }
                 return addLog('breach-results', data.error, 'error');
+            }
+            
+            if (data.output) {
+                addLog('breach-results', `<div style="background:rgba(0,0,0,0.5); padding:1rem; border-left:4px solid var(--accent-magenta); white-space:pre-wrap; font-family:'JetBrains Mono',monospace; font-size:0.88rem; line-height:1.6; margin-bottom:1rem; color:#e0e0e0;">${data.output}</div>`, 'none', true);
             }
             
             if (!data.breached) {
@@ -416,8 +516,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             let simBadge = data.simulated ? ' <span style="font-size:0.7em; padding:0.1rem 0.4rem; background:rgba(239,68,68,0.2); border:1px solid var(--accent-red); border-radius:4px; color:var(--accent-red)">SİMÜLE EDİLDİ</span>' : '';
-            addLog('breach-results', `<strong class="status-down" style="font-size:1.1rem;"><i class="fa-solid fa-triangle-exclamation"></i> UYARI: Bu E-posta Adresi Sızdırılmış!${simBadge}</strong>`, 'none', true);
-            addLog('breach-results', `Aşağıdaki veri tabanı ihlallerinde bu e-postaya ait kayıtlar tespit edildi:`, 'info');
+            const titleText = targetType === 'email' ? 'UYARI: Bu E-posta Adresi Sızdırılmış!' : 'UYARI: Bu Parola Sızdırılmış!';
+            addLog('breach-results', `<strong class="status-down" style="font-size:1.1rem;"><i class="fa-solid fa-triangle-exclamation"></i> ${titleText}${simBadge}</strong>`, 'none', true);
+            addLog('breach-results', `Aşağıdaki veri tabanı ihlallerinde bu hedefe ait kayıtlar tespit edildi:`, 'info');
             
             let tableHtml = `
                 <div class="cyber-table-container">
@@ -450,7 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             addLog('breach-results', tableHtml, 'none', true);
             
-            addExportButtons('breach-results', data.breaches, 'eposta_sizinti_raporu', [
+            addExportButtons('breach-results', data.breaches, 'sizinti_raporu', [
                 { label: 'Platform / Kaynak', key: 'name' },
                 { label: 'Tarih', key: 'date' },
                 { label: 'Detaylar', key: 'details' }
@@ -460,12 +561,109 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 13. Güvenli Link Analizi (VirusTotal)
-    document.getElementById('btn-vt').addEventListener('click', () => {
-        const targetVal = document.getElementById('vt-target').value.trim();
-        if (!targetVal) return;
+    let vtSelectedFilePath = "";
+
+    const btnVtSelectFile = document.getElementById('btn-vt-select-file');
+    const btnVtClearFile = document.getElementById('btn-vt-clear-file');
+    const vtSelectDropdown = document.getElementById('vt-select-dropdown');
+    const vtSelectedFileContainer = document.getElementById('vt-selected-file-container');
+    const vtSelectedFileName = document.getElementById('vt-selected-file-name');
+    const vtTargetInput = document.getElementById('vt-target');
+
+    // UI Temizleme Mekanizması (UI Reset)
+    function vt_ui_temizle() {
+        vtSelectedFilePath = "";
+        if (vtTargetInput) vtTargetInput.value = "";
+        if (vtSelectedFileContainer) vtSelectedFileContainer.style.display = 'none';
+        if (vtSelectedFileName) vtSelectedFileName.textContent = "";
         
-        postApi('/api/osint/virustotal', {target: targetVal}, 'btn-vt', 'vt-results', (data) => {
+        const vtResults = document.getElementById('vt-results');
+        if (vtResults) {
+            vtResults.innerHTML = '';
+            vtResults.classList.add('empty');
+        }
+        
+        const btnAiVt = document.getElementById('btn-ai-vt');
+        if (btnAiVt) btnAiVt.style.display = 'none';
+
+        console.log("[+] UI Otomatik Temizleme Tetiklendi: Eski analiz verileri sıfırlandı.");
+    }
+
+    if (btnVtSelectFile && vtSelectDropdown) {
+        // Dropdown aç/kapat
+        btnVtSelectFile.addEventListener('click', (e) => {
+            e.stopPropagation();
+            vtSelectDropdown.style.display = vtSelectDropdown.style.display === 'block' ? 'none' : 'block';
+        });
+
+        // Dropdown dışına tıklandığında menüyü kapat
+        document.addEventListener('click', () => {
+            vtSelectDropdown.style.display = 'none';
+        });
+
+        // Dropdown içindeki elemanların hover ve click aksiyonları
+        vtSelectDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.background = 'rgba(255, 255, 255, 0.08)');
+            item.addEventListener('mouseleave', () => item.style.background = 'none');
+            
+            item.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                vtSelectDropdown.style.display = 'none';
+                const mode = item.dataset.mode;
+                
+                setLoading('btn-vt-select-file', true);
+                try {
+                    const req = await fetch('/api/osint/select-file', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mode: mode })
+                    });
+                    const data = await req.json();
+                    if (data.success && data.file_path) {
+                        vtTargetInput.value = '';
+                        vtSelectedFilePath = data.file_path;
+                        vtTargetInput.value = data.file_path;
+                        
+                        const icon = data.is_directory ? '<i class="ti ti-folder"></i> ' : '<i class="ti ti-file-text"></i> ';
+                        vtSelectedFileName.innerHTML = icon + data.filename;
+                        vtSelectedFileContainer.style.display = 'inline-flex';
+                    }
+                } catch (err) {
+                    console.error("Seçim penceresi açılamadı: ", err);
+                } finally {
+                    setLoading('btn-vt-select-file', false);
+                }
+            });
+        });
+    }
+
+    if (btnVtClearFile) {
+        btnVtClearFile.addEventListener('click', () => {
+            vt_ui_temizle();
+        });
+    }
+
+    if (vtTargetInput) {
+        vtTargetInput.addEventListener('input', () => {
+            if (vtTargetInput.value.trim() === "") {
+                vt_ui_temizle();
+            } else if (vtTargetInput.value.trim() !== vtSelectedFilePath) {
+                vtSelectedFilePath = "";
+                if (vtSelectedFileContainer) vtSelectedFileContainer.style.display = 'none';
+                if (vtSelectedFileName) vtSelectedFileName.textContent = "";
+            }
+        });
+    }
+
+    document.getElementById('btn-vt').addEventListener('click', () => {
+        const targetVal = vtTargetInput.value.trim();
+        if (!targetVal && !vtSelectedFilePath) return;
+        
+        postApi('/api/osint/virustotal', {target: targetVal, file_path: vtSelectedFilePath}, 'btn-vt', 'vt-results', (data) => {
             if (data.error || !data.success) {
+                if (data.output) {
+                    addLog('vt-results', `<div style="background:rgba(0,0,0,0.5); padding:1rem; border-left:4px solid var(--accent-red); white-space:pre-wrap; font-family:'JetBrains Mono',monospace; font-size:0.88rem; line-height:1.6; margin-top:0.5rem; margin-bottom:1rem; color:#f87171;">${data.output}</div>`, 'none', true);
+                }
                 return addLog('vt-results', data.error || 'Tarama başarısız oldu.', 'error');
             }
             
@@ -495,6 +693,10 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             addLog('vt-results', headerHtml, 'none', true);
             
+            if (data.output) {
+                addLog('vt-results', `<div style="background:rgba(0,0,0,0.5); padding:1rem; border-left:4px solid var(--accent-magenta); white-space:pre-wrap; font-family:'JetBrains Mono',monospace; font-size:0.88rem; line-height:1.6; margin-top:0.5rem; margin-bottom:1.25rem; color:#e0e0e0;">${data.output}</div>`, 'none', true);
+            }
+            
             let tableHtml = `
                 <div class="cyber-table-container">
                     <table class="cyber-table">
@@ -510,14 +712,26 @@ document.addEventListener('DOMContentLoaded', () => {
             
             data.engines.forEach(e => {
                 let catClass = 'status-info';
-                if (e.category === 'malicious' || e.category === 'suspicious') catClass = 'status-down';
-                else if (e.category === 'harmless' || e.category === 'clean') catClass = 'status-up';
+                let iconHtml = '<i class="fa-solid fa-circle-question"></i>';
+                
+                if (e.category === 'malicious') {
+                    catClass = 'status-down';
+                    iconHtml = '<i class="fa-solid fa-shield-virus"></i>';
+                } else if (e.category === 'suspicious') {
+                    catClass = 'status-down';
+                    iconHtml = '<i class="fa-solid fa-triangle-exclamation"></i>';
+                } else if (e.category === 'harmless' || e.category === 'clean') {
+                    catClass = 'status-up';
+                    iconHtml = '<i class="fa-solid fa-circle-check"></i>';
+                }
+                
+                let cleanResult = e.result.replace(/[🚨🟢⚠️]/g, '').trim();
                 
                 tableHtml += `
                     <tr>
                         <td style="font-weight:bold; color:#fff;">${e.engine}</td>
                         <td>${e.category.toUpperCase()}</td>
-                        <td><span class="${catClass}">${e.result}</span></td>
+                        <td><span class="${catClass}" style="display:inline-flex; align-items:center; gap:0.4rem;">${iconHtml}${cleanResult}</span></td>
                     </tr>
                 `;
             });
@@ -536,6 +750,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 { label: 'Sonuç', key: 'result' }
             ]);
             document.getElementById('btn-ai-vt').style.display = 'inline-flex';
+        });
+    });
+
+    // --- DoS STRES TESTİ EVENT HANDLER ---
+    document.getElementById('btn-stresstest').addEventListener('click', () => {
+        const targetUrl = document.getElementById('stress-target').value.trim();
+        const reqCount = document.getElementById('stress-count').value.trim();
+        
+        if (!targetUrl) return;
+        
+        document.getElementById('stress-stats-panel').style.display = 'none';
+        document.getElementById('stress-chart-card').style.display = 'none';
+        
+        postApi('/api/security/stress-test', {target: targetUrl, count: reqCount}, 'btn-stresstest', 'stress-results', (data) => {
+            if (data.error) {
+                return addLog('stress-results', data.error, 'error');
+            }
+            
+            addLog('stress-results', `<b>[+] STRES TESTİ BAŞARIYLA TAMAMLANDI</b>`, 'success', true);
+            addLog('stress-results', `Hedef URL: ${data.target}`, 'info');
+            addLog('stress-results', `Toplam Gönderilen İstek: ${data.total_requests}`, 'info');
+            addLog('stress-results', `Başarılı Yanıtlar: <span class="status-up">${data.success}</span> | Hatalı Yanıtlar: <span class="status-down">${data.errors}</span>`, 'none', true);
+            addLog('stress-results', `Ortalama Gecikme: ${data.avg_latency} ms (Min: ${data.min_latency} ms | Maks: ${data.max_latency} ms)`, 'info');
+            addLog('stress-results', `Toplam Test Süresi: ${data.total_duration_ms} ms`, 'info');
+            
+            // Eğer anomali varsa logla
+            if (data.anomalies && data.anomalies.length > 0) {
+                addLog('stress-results', `<b>⚠️ Sunucuda Tespit Edilen Kararsızlıklar / Anomaliler:</b>`, 'error', true);
+                data.anomalies.forEach(anomaly => {
+                    addLog('stress-results', `<span class="status-down">${anomaly}</span>`, 'none', true);
+                });
+            } else {
+                addLog('stress-results', `[+] Test süresince sunucu kararlı çalıştı. Herhangi bir anomali tespit edilmedi.`, 'success');
+            }
+
+            // Stats panelini güncelle ve görünür yap
+            document.getElementById('stress-stat-avg').textContent = `${data.avg_latency} ms`;
+            document.getElementById('stress-stat-success-fail').textContent = `${data.success} / ${data.errors}`;
+            document.getElementById('stress-stat-maxmin').textContent = `${data.max_latency} / ${data.min_latency} ms`;
+            
+            const riskEl = document.getElementById('stress-stat-risk');
+            riskEl.textContent = `${data.risk_percentage}% - ${data.risk_level.split(' ')[0]}`;
+            riskEl.style.color = data.risk_color;
+            
+            document.getElementById('stress-stats-panel').style.display = 'block';
+            
+            // Grafiği çiz ve görünür yap
+            document.getElementById('stress-chart-card').style.display = 'flex';
+            drawLatencyBarChart('stress-chart', data.latencies);
+            
+            document.getElementById('btn-ai-stress').style.display = 'inline-flex';
         });
     });
 
@@ -668,7 +933,7 @@ document.addEventListener('DOMContentLoaded', () => {
     warnPopup.style.display = 'none';
     warnPopup.innerHTML = `
         <div style="background: rgba(15, 15, 20, 0.95); padding: 3rem; border-radius: 1.5rem; text-align: center; border: 1px solid var(--accent-magenta); box-shadow: 0 0 40px rgba(255, 0, 60, 0.3);">
-            <i class="fa-solid fa-triangle-exclamation" style="font-size: 3.5rem; color: var(--accent-magenta); margin-bottom: 1.5rem; filter: drop-shadow(0 0 10px rgba(255,0,60,0.5));"></i>
+            <i class="ti ti-alert-triangle" style="font-size: 3.5rem; color: var(--accent-magenta); margin-bottom: 1.5rem; filter: drop-shadow(0 0 10px rgba(255,0,60,0.5));"></i>
             <h2 style="color: var(--text-primary); margin-bottom: 2rem; font-size: 1.8rem; letter-spacing: 0.05em; text-transform: uppercase;">Lütfen İstasyonu Aktif Edin</h2>
             <div style="display: flex; gap: 1rem; justify-content: center;">
                 <button id="btn-popup-close" class="btn-primary" style="background: rgba(255,255,255,0.05); color: #fff; box-shadow: none;">Kapat</button>
@@ -690,32 +955,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const powerBtn = document.getElementById('global-power');
     const dashboard = document.querySelector('.dashboard-content');
     const sidebar = document.querySelector('.sidebar');
-    
-    // --- SHUTDOWN WARN POPUP LOGIC ---
-    const shutdownPopup = document.createElement('div');
-    shutdownPopup.id = 'shutdown-popup';
-    shutdownPopup.className = 'popup-overlay';
-    shutdownPopup.style.display = 'none';
-    shutdownPopup.innerHTML = `
-        <div style="background: rgba(15, 15, 20, 0.95); padding: 3rem; border-radius: 1.5rem; text-align: center; border: 1px solid var(--accent-red); box-shadow: 0 0 40px rgba(239, 68, 68, 0.3);">
-            <i class="fa-solid fa-power-off" style="font-size: 3.5rem; color: var(--accent-red); margin-bottom: 1.5rem; filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.5)); animation: pulsing 1s infinite;"></i>
-            <h2 style="color: var(--text-primary); margin-bottom: 1rem; font-size: 1.8rem; letter-spacing: 0.05em; text-transform: uppercase;">İstasyon Devredışı Bırakılıyor</h2>
-            <p style="color: var(--text-secondary); margin-bottom: 2rem;">Hareketsizlik tespit edildi. Sistem otomatik olarak <strong style="color: var(--accent-red); font-size: 1.5em; margin: 0 0.5rem;" id="shutdown-timer">10</strong> saniye içinde kapatılacak.</p>
-            <div style="display: flex; gap: 1rem; justify-content: center;">
-                <button id="btn-shutdown-cancel" class="btn-primary" style="background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue)); color: #000;">İptal Et (İstasyona Dön)</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(shutdownPopup);
-
-    let afkTimeLeft = 300;
-    let isShutdownWarnActive = false;
-    let shutdownTimeLeft = 10;
-    let sessionSecondsTotal = 0; // Oturum süresi sayacı
-    
-    const afkTimeSpan = document.getElementById('afk-time');
-    const shutdownTimerSpan = document.getElementById('shutdown-timer');
-    const sessionTimeSpan = document.getElementById('session-time');
 
 
 
@@ -727,7 +966,7 @@ document.addEventListener('DOMContentLoaded', () => {
     whoAmIPopup.innerHTML = `
         <div class="whoami-popup">
             <div class="whoami-header">
-                <h2 class="whoami-title"><i class="fa-solid fa-circle-info"></i> Who Am I? / Uygulama Profili</h2>
+                <h2 class="whoami-title"><i class="ti ti-info-circle"></i> Ben Kimim? / Uygulama Profili</h2>
                 <button id="btn-whoami-close-top" class="btn-primary" style="background: rgba(255,255,255,0.09); color: #fff; box-shadow: none;">Kapat</button>
             </div>
             <div class="whoami-grid">
@@ -749,7 +988,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <div class="whoami-footer">
-                <button id="btn-whoami-close-bottom" class="btn-primary"><i class="fa-solid fa-shield"></i> Anladım</button>
+                <button id="btn-whoami-close-bottom" class="btn-primary"><i class="ti ti-shield"></i> Anladım</button>
             </div>
         </div>
     `;
@@ -770,64 +1009,7 @@ document.addEventListener('DOMContentLoaded', () => {
     whoAmIPopup.querySelector('#btn-whoami-close-top').addEventListener('click', closeWhoAmI);
     whoAmIPopup.querySelector('#btn-whoami-close-bottom').addEventListener('click', closeWhoAmI);
 
-    function updateAfkUI() {
-        let mins = Math.floor(afkTimeLeft / 60);
-        let secs = afkTimeLeft % 60;
-        afkTimeSpan.textContent = `${mins < 10 ? '0'+mins : mins}:${secs < 10 ? '0'+secs : secs}`;
-    }
 
-    shutdownPopup.querySelector('#btn-shutdown-cancel').addEventListener('click', () => {
-        shutdownPopup.style.display = 'none';
-        isShutdownWarnActive = false;
-        afkTimeLeft = 300;
-        updateAfkUI();
-    });
-
-    function resetAfk() {
-        if (isStationActive && !isShutdownWarnActive && !isBooting) {
-            afkTimeLeft = 300;
-            updateAfkUI();
-        }
-    }
-    
-    // Listeners to refresh AFK
-    window.addEventListener('mousemove', resetAfk);
-    window.addEventListener('keypress', resetAfk);
-    window.addEventListener('click', resetAfk);
-
-    setInterval(() => {
-        // Oturum Süresini Güncelle (Sadece sistem aktif iken artar)
-        if (isStationActive && !isBooting) {
-            sessionSecondsTotal++;
-            let ss = sessionSecondsTotal % 60;
-            let mm = Math.floor(sessionSecondsTotal / 60) % 60;
-            let hh = Math.floor(sessionSecondsTotal / 3600);
-            sessionTimeSpan.textContent = 
-                `${hh < 10 ? '0'+hh : hh}:${mm < 10 ? '0'+mm : mm}:${ss < 10 ? '0'+ss : ss}`;
-        }
-    
-        if (!isStationActive || isBooting) return;
-        
-        if (isShutdownWarnActive) {
-            shutdownTimeLeft--;
-            shutdownTimerSpan.textContent = shutdownTimeLeft;
-            if (shutdownTimeLeft <= 0) {
-                shutdownPopup.style.display = 'none';
-                isShutdownWarnActive = false;
-                powerBtn.click(); // Gracefully shutdown
-            }
-        } else {
-            afkTimeLeft--;
-            if(afkTimeLeft >= 0) updateAfkUI();
-            
-            if (afkTimeLeft <= 0) {
-                isShutdownWarnActive = true;
-                shutdownTimeLeft = 10;
-                shutdownTimerSpan.textContent = shutdownTimeLeft;
-                shutdownPopup.style.display = 'flex';
-            }
-        }
-    }, 1000);
     
     // Create boot overlay
     const overlay = document.createElement('div');
@@ -851,7 +1033,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Shutdown System
             isStationActive = false;
             powerBtn.className = 'status-badge offline';
-            powerBtn.innerHTML = '<i class="fa-solid fa-power-off"></i> İSTASYON DEVRE DIŞI';
+            powerBtn.innerHTML = '<i class="ti ti-power"></i> İSTASYON DEVRE DIŞI';
             
             // Sadece menü tuşlarını ve içerikleri grileştir, sol üst amblemi hariç tut
             document.querySelector('.nav-menu').classList.add('app-disabled');
@@ -888,11 +1070,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     clearInterval(bootInterval);
                     isBooting = false;
                     isStationActive = true;
-                    
-                    // Reset AFK upon boot
-                    afkTimeLeft = 300;
-                    isShutdownWarnActive = false;
-                    updateAfkUI();
                     
                     overlay.style.display = 'none';
                     powerBtn.className = 'status-badge';
@@ -947,11 +1124,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (type === 'user') {
             style += ' background: rgba(168, 85, 247, 0.1); border-right: 3px solid #a855f7; align-self: flex-end; color: #fff;';
             alignment = 'margin-left: auto;';
-            icon = 'fa-user-astronaut';
+            icon = 'ti-user';
             title = 'Siz';
         } else if (type === 'system') {
             style += ' background: rgba(0, 240, 255, 0.05); border-left: 3px solid var(--accent-cyan); align-self: flex-start; color: var(--text-primary);';
-            icon = 'fa-robot';
+            icon = 'ti-sparkles';
             title = 'Cyber Sentinel AI';
         }
         
@@ -959,7 +1136,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         msgDiv.innerHTML = `
             <div style="font-weight: 700; margin-bottom: 0.25rem; color: ${type === 'user' ? '#c084fc' : 'var(--accent-cyan)'}; font-size: 0.75rem;">
-                <i class="fa-solid ${icon}"></i> ${title}
+                <i class="ti ${icon}"></i> ${title}
             </div>
             <div style="white-space: pre-wrap; font-family: inherit;">${text}</div>
         `;
@@ -1081,7 +1258,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Draw a beautiful triage report
                 let triageHtml = `
                     <div style="padding: 1.5rem; border-radius: 1.5rem; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--accent-magenta); margin-top: 1rem;">
-                        <h4 style="color: var(--accent-magenta); font-size: 1.1rem; font-weight: 800; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.75rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;"><i class="fa-solid fa-wand-magic-sparkles"></i> YAPAY ZEKA ZAFİYET TRİYAJ RAPORU</h4>
+                        <h4 style="color: var(--accent-magenta); font-size: 1.1rem; font-weight: 800; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.75rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;"><i class="ti ti-wand"></i> YAPAY ZEKA ZAFİYET TRİYAJ RAPORU</h4>
                         
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
                             <div class="glass-panel" style="padding: 1rem; border-radius: 0.75rem; border-color: rgba(255,255,255,0.02); text-align: center;">
@@ -1099,12 +1276,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
 
                         <div style="margin-bottom: 1.5rem;">
-                            <h5 style="color: var(--accent-cyan); font-size: 0.9rem; font-weight: 700; margin-bottom: 0.5rem;"><i class="fa-solid fa-circle-nodes"></i> Zafiyet Analiz Detayları</h5>
+                            <h5 style="color: var(--accent-cyan); font-size: 0.9rem; font-weight: 700; margin-bottom: 0.5rem;"><i class="ti ti-network"></i> Zafiyet Analiz Detayları</h5>
                             <p style="color: var(--text-secondary); line-height: 1.5; font-size: 0.88rem; text-align: justify; white-space: pre-line;">${data.analysis}</p>
                         </div>
                         
                         <div>
-                            <h5 style="color: var(--accent-green); font-size: 0.9rem; font-weight: 700; margin-bottom: 0.5rem;"><i class="fa-solid fa-code"></i> Güvenli Kod Önerisi (Remediation)</h5>
+                            <h5 style="color: var(--accent-green); font-size: 0.9rem; font-weight: 700; margin-bottom: 0.5rem;"><i class="ti ti-code"></i> Güvenli Kod Önerisi (Remediation)</h5>
                             <pre style="background: rgba(0,0,0,0.6); padding: 1rem; border-radius: 0.5rem; border: 1px solid rgba(255,255,255,0.05); color: #a3e635; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap;"><code>${data.secure_code}</code></pre>
                         </div>
                     </div>
@@ -1115,7 +1292,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (err) {
                 const errorLine = document.createElement('div');
                 errorLine.className = 'log-line';
-                errorLine.innerHTML = `<i class="fa-solid fa-times-circle status-down"></i> <span style="color:var(--accent-red)">[Hata]: ${err.message}</span>`;
+                errorLine.innerHTML = `<i class="ti ti-circle-x status-down"></i> <span style="color:var(--accent-red)">[Hata]: ${err.message}</span>`;
                 aiTriageResults.appendChild(errorLine);
             } finally {
                 btnAiTriage.innerHTML = originalText;
@@ -1152,7 +1329,7 @@ document.addEventListener('DOMContentLoaded', () => {
             rsa:     '-----BEGIN PUBLIC KEY----- veya -----BEGIN RSA PRIVATE KEY-----'
         };
 
-        label.innerHTML = `<i class="fa-solid fa-key"></i> ${labels[algo] || 'Anahtar'}`;
+        label.innerHTML = `<i class="ti ti-key"></i> ${labels[algo] || 'Anahtar'}`;
         keyInput.placeholder = placeholders[algo] || '';
         rsaPanel.style.display = (algo === 'rsa') ? 'block' : 'none';
         keyWrapper.style.display = (algo === 'rsa') ? 'none' : 'block';

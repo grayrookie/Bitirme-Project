@@ -322,6 +322,11 @@ body {
 
 .styled-input::placeholder {
     color: rgba(255,255,255,0.2);
+    transition: color 0.15s ease;
+}
+
+.styled-input:focus::placeholder {
+    color: transparent;
 }
 
 .styled-input:focus {
@@ -721,5 +726,24 @@ body {
     box-shadow: 0 0 10px currentColor;
 }
 
+/* ---- Taahhütname Modal Katman Garantisi ---- */
+/* Çerez elemanlarından (z-index 500-600) çok daha yüksekte kalması zorunlu */
+#disclaimer-modal {
+    z-index: 50000 !important;
+    pointer-events: auto !important;
+}
 
+/* Taahhütname buton uyarı animasyonu */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%       { transform: translateX(-8px); }
+    40%       { transform: translateX(8px); }
+    60%       { transform: translateX(-5px); }
+    80%       { transform: translateX(5px); }
+}
 
+/* Taahhütname kapanış animasyonu */
+@keyframes aerodynamicFadeOut {
+    from { opacity: 1; transform: scale(1); }
+    to   { opacity: 0; transform: scale(1.05); }
+}
