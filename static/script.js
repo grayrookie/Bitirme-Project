@@ -753,6 +753,90 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // --- PASSIVE RECON EVENT HANDLER ---
+    const btnPassiveRecon = document.getElementById('btn-passive-recon');
+    if (btnPassiveRecon) {
+        btnPassiveRecon.addEventListener('click', () => {
+            const targetVal = document.getElementById('passive-recon-target').value.trim();
+            if (!targetVal) return;
+            
+            const consoleEl = document.getElementById('passive-recon-console');
+            const cveTableBody = document.getElementById('passive-recon-cve-table-body');
+            const cveContainer = document.getElementById('passive-recon-cve-container');
+            const exportContainer = document.getElementById('passive-recon-export-container');
+            
+            consoleEl.value = "[*] Pasif Shodan veri havuzu sorgulanıyor, lütfen bekleyin...\n";
+            cveTableBody.innerHTML = '';
+            cveContainer.style.display = 'none';
+            exportContainer.innerHTML = '';
+            
+            setLoading('btn-passive-recon', true);
+            
+            fetch('/api/osint/passive-recon', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target: targetVal })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    consoleEl.value += `\n[❌] HATA: ${data.error}\n`;
+                } else {
+                    consoleEl.value = data.output;
+                    consoleEl.scrollTop = consoleEl.scrollHeight;
+                    
+                    if (data.cves && data.cves.length > 0) {
+                        cveContainer.style.display = 'block';
+                        data.cves.forEach(item => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td style="color: var(--accent-red); font-weight: bold; font-family: 'JetBrains Mono', monospace;"><a href="https://nvd.nist.gov/vuln/detail/${item.cve}" target="_blank" style="color: inherit; text-decoration: none;"><i class="ti ti-link"></i> ${item.cve}</a></td>
+                                <td style="color: var(--text-secondary); white-space: normal;">${item.description}</td>
+                            `;
+                            cveTableBody.appendChild(row);
+                        });
+                    }
+                    
+                    // Add export buttons for recon report
+                    const datasetToExport = [];
+                    if (data.ports) {
+                        data.ports.forEach(p => {
+                            datasetToExport.push({ type: 'Açık Port', detail: `Port ${p}` });
+                        });
+                    }
+                    if (data.cves) {
+                        data.cves.forEach(c => {
+                            datasetToExport.push({ type: 'Zafiyet (CVE)', detail: c.cve });
+                        });
+                    }
+                    if (data.hostnames) {
+                        data.hostnames.forEach(h => {
+                            datasetToExport.push({ type: 'Alan Adı', detail: h });
+                        });
+                    }
+                    if (data.tags) {
+                        data.tags.forEach(t => {
+                            datasetToExport.push({ type: 'Sistem Etiketi', detail: t });
+                        });
+                    }
+                    
+                    if (datasetToExport.length > 0) {
+                        addExportButtons('passive-recon-export-container', datasetToExport, 'pasif_cihaz_kesif_raporu', [
+                            { label: 'İstihbarat Tipi', key: 'type' },
+                            { label: 'Detay', key: 'detail' }
+                        ]);
+                    }
+                }
+            })
+            .catch(err => {
+                consoleEl.value += `\n[❌] BAĞLANTI HATASI: ${err.message}\n`;
+            })
+            .finally(() => {
+                setLoading('btn-passive-recon', false);
+            });
+        });
+    }
+
     // --- DoS STRES TESTİ EVENT HANDLER ---
     document.getElementById('btn-stresstest').addEventListener('click', () => {
         const targetUrl = document.getElementById('stress-target').value.trim();

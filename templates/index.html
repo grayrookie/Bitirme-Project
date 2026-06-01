@@ -78,6 +78,7 @@
                 <div class="category-title">Tehdit İstihbaratı (OSINT)</div>
                 <button class="nav-item" data-tab="breach"><i class="ti ti-mail-opened"></i><span>Sızıntı Kontrolü (Email)</span></button>
                 <button class="nav-item" data-tab="vt"><i class="ti ti-link"></i><span>Güvenli Link Analizi</span></button>
+                <button class="nav-item" data-tab="passive-recon"><i class="ti ti-eye"></i><span>Pasif Cihaz Keşfi</span></button>
                 
                 <div class="category-title">Sistem & Kod Güvenliği</div>
                 <button class="nav-item" data-tab="sast"><i class="ti ti-code"></i><span>Güvenli Kod Analizi</span></button>
@@ -238,6 +239,46 @@
                     </div>
                 </section>
 
+                <!-- Passive Device Discovery Tab -->
+                <section id="passive-recon" class="tab-content">
+                    <div class="tool-card glass-panel">
+                        <div class="card-header">
+                            <h3><i class="ti ti-eye"></i> Pasif Cihaz Keşfi (Shodan Altyapısı)</h3>
+                            <p>Hedef IP adresine tek bir paket göndermeden Shodan Internet-Wide Scanner veri tabanından açık portları, domainleri ve bilinen zafiyetleri (CVE) sorgular.</p>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="passive-recon-target" placeholder="Örn: 8.8.8.8" class="styled-input">
+                            <button id="btn-passive-recon" class="btn-primary"><i class="ti ti-search"></i> Sorgula</button>
+                        </div>
+                        
+                        <div style="margin-top: 1.5rem;">
+                            <label style="font-size: 0.78rem; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; display: block; margin-bottom: 0.4rem;">
+                                <i class="ti ti-terminal-2"></i> Siber İstihbarat Raporu / Konsol
+                            </label>
+                            <textarea id="passive-recon-console" readonly class="styled-input" style="width: 100%; height: 350px; font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; color: #a3e635; background: #000000; border: 1px solid rgba(0, 240, 255, 0.15); border-radius: 1rem; resize: vertical; padding: 1.25rem; line-height: 1.6;" placeholder="Sorgulama başlatıldığında Shodan istihbarat verileri buraya dökülecektir..."></textarea>
+                        </div>
+
+                        <!-- Table showing CVEs and details if found -->
+                        <div id="passive-recon-cve-container" style="display: none; margin-top: 1.5rem;">
+                            <h4 style="font-size: 0.9rem; color: var(--accent-red); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem;"><i class="ti ti-bug"></i> Tespit Edilen Zafiyet Detayları (CVE)</h4>
+                            <div class="cyber-table-container">
+                                <table class="cyber-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Zafiyet Kodu</th>
+                                            <th>Derece / Açıklama</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="passive-recon-cve-table-body">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div id="passive-recon-export-container" style="margin-top: 1rem;"></div>
+                    </div>
+                </section>
+
                 <!-- Güvenli Kod Analizi Tab (8) -->
                 <section id="sast" class="tab-content">
                     <div class="tool-card glass-panel">
@@ -247,7 +288,7 @@
                         </div>
                         <div class="input-group" style="border-radius: 1rem; flex-direction: column; padding: 1rem; gap: 1rem; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05);">
                             <label style="font-size: 0.85rem; color: var(--accent-cyan); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem;"><i class="ti ti-brand-python"></i> Python Kaynak Kodu Yapıştırın</label>
-                            <textarea id="sast-code" placeholder="import os&#10;import subprocess&#10;&#10;# Zafiyetli kod örneği&#10;api_key = 'sec_key_xyz123' # Sabit kodlanmış parola&#10;eval(input('Hesaplama girin: ')) # RCE açığı&#10;os.system('ping ' + ip) # Komut enjeksiyonu açığı" class="styled-input" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.03); border-radius: 0.5rem; height: 180px; resize: vertical; font-family: 'JetBrains Mono', monospace; padding: 1rem; width: 100%; font-size: 0.95rem; line-height: 1.5; color: #a3e635;"></textarea>
+                            <textarea id="sast-code" rows="18" placeholder="import os&#10;import subprocess&#10;&#10;# Zafiyetli kod örneği&#10;api_key = 'sec_key_xyz123' # Sabit kodlanmış parola&#10;eval(input('Hesaplama girin: ')) # RCE açığı&#10;os.system('ping ' + ip) # Komut enjeksiyonu açığı" class="styled-input" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.03); border-radius: 0.5rem; resize: vertical; font-family: 'JetBrains Mono', monospace; padding: 1rem; width: 100%; font-size: 0.95rem; line-height: 1.5; color: #a3e635;"></textarea>
                             <button id="btn-sast" class="btn-primary" style="align-self: flex-end; width: auto; padding: 0.8rem 2rem;"><i class="ti ti-shield-check"></i> Kodu Analiz Et (SAST)</button>
                         </div>
                         <div class="results-container empty" id="sast-results" style="margin-top: 1.5rem;"></div>
