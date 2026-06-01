@@ -1,0 +1,58 @@
+{
+  "name": "network-security-dashboard",
+  "version": "1.0.0",
+  "description": "Cyber Sentinel desktop app (Electron + Flask)",
+  "main": "main.js",
+  "author": "Cyber Sentinel Team",
+  "license": "MIT",
+  "scripts": {
+    "start": "python run_web.py",
+    "dist": "electron-builder --win nsis",
+    "dist:portable": "electron-builder --win portable",
+    "dist:portable:single": "electron-builder --win portable --x64 --publish never"
+  },
+  "build": {
+    "appId": "com.cybersentinel.desktop",
+    "productName": "Cyber Sentinel",
+    "executableName": "CyberSentinel",
+    "copyright": "Copyright © 2026 Cyber Sentinel",
+    "asar": true,
+    "asarUnpack": [
+      "backend/app.exe"
+    ],
+    "files": [
+      "main.js",
+      "package.json",
+      "build/**/*",
+      "backend/app.exe"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "publisherName": "Cyber Sentinel",
+      "legalTrademarks": "Cyber Sentinel",
+      "requestedExecutionLevel": "asInvoker",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}.${ext}"
+    },
+    "nsis": {
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^37.2.0",
+    "electron-builder": "^25.1.8"
+  }
+}

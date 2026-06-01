@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siber Güvenlik İstasyonu</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .category-title {
+            color: rgba(255,255,255,0.4);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin: 1rem 0 0.5rem 1rem;
+            font-weight: 700;
+        }
+        .nav-menu { gap: 0.5rem; overflow-y: auto; max-height: calc(100vh - 200px); padding-right: 10px; }
+        .nav-menu::-webkit-scrollbar { width: 4px; }
+        .nav-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .input-group { flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+    <!-- YASAL VE ETİK UYARI TAAHHÜTNAMESİ MODALI -->
+    <div id="disclaimer-modal" class="popup-overlay" style="z-index: 3000; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(15px);">
+        <div class="glass-panel" style="padding: 2.5rem; max-width: 600px; width: 90%; border: 1px solid var(--accent-magenta); border-radius: 1.5rem; box-shadow: 0 0 40px rgba(255, 0, 60, 0.2);">
+            <h2 style="color: var(--accent-magenta); margin-bottom: 1.5rem; text-align: center; text-transform: uppercase; font-size: 1.4rem; letter-spacing: 0.05em; line-height: 1.4;"><i class="fa-solid fa-scale-balanced"></i> ETİK ve YASAL UYARI TAAHHÜTNAMESİ</h2>
+            <div class="disclaimer-text" style="color: var(--text-secondary); line-height: 1.6; font-size: 0.93rem; max-height: 250px; overflow-y: auto; padding-right: 10px; margin-bottom: 1.5rem; text-align: justify; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: inherit;">
+                <p style="margin-bottom: 1rem;">Bu yazılım (Cyber Sentinel), akademik bir bitirme projesi kapsamında geliştirilmiş bir ağ analiz ve sızma testi (penetrasyon) simülasyon aracıdır.</p>
+                <p style="margin-bottom: 1rem;"><strong>KULLANIM ŞARTLARI:</strong><br>
+                1. Bu aracı yalnızca <strong>kendi sahibi olduğunuz</strong> veya <strong>yasal olarak yazılı test izni aldığınız</strong> sistemlerde kullanabilirsiniz.<br>
+                2. İzin alınmamış üçüncü taraf sistemlere tarama veya test faaliyeti gerçekleştirmek, 5237 sayılı Türk Ceza Kanunu'nun (TCK) <strong>Bilişim Alanında Suçlar</strong> başlıklı maddeleri (TCK M. 243: Bilişim sistemine yetkisiz girme, TCK M. 244: Sistemi engelleme, bozma, verileri yok etme veya değiştirme) uyarınca <strong>hapis ve para cezası</strong> ile sonuçlanabilir.<br>
+                3. Bu yazılımın kötü amaçlı veya izinsiz kullanımından doğacak her türlü yasal, hukuki ve cezai sorumluluk <strong>tamamen son kullanıcıya aittir</strong>. Geliştirici ekip hiçbir yasal sorumluluk kabul etmez.</p>
+            </div>
+            <div style="margin-bottom: 1.5rem; display: flex; align-items: flex-start; gap: 0.75rem;">
+                <input type="checkbox" id="disclaimer-check" style="margin-top: 0.25rem; transform: scale(1.2); accent-color: var(--accent-magenta); cursor: pointer;">
+                <label for="disclaimer-check" style="color: var(--text-primary); font-size: 0.85rem; cursor: pointer; user-select: none;">
+                    Yukarıdaki yasal uyarıları okudum. Bu aracı yalnızca etik, eğitim ve izinli test sınırları dahilinde kullanacağımı ve tüm yasal sorumluluğu üstlendiğimi kabul ve taahhüt ediyorum.
+                </label>
+            </div>
+            <button id="btn-accept-disclaimer" class="btn-primary" style="width: 100%; justify-content: center; background: linear-gradient(135deg, var(--accent-magenta), #b91c1c); color: #fff; box-shadow: 0 0 20px rgba(255, 0, 60, 0.3);" disabled>
+                <i class="fa-solid fa-shield-halved"></i> TAAHHÜT ET ve SİSTEME GİRİŞ YAP
+            </button>
+        </div>
+    </div>
+
+
+
+    <div class="background-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar glass-panel">
+            <div class="brand">
+                <i id="sidebar-dragon-emblem" class="fa-solid fa-shield-halved brand-icon" style="transition: all 0.5s ease;"></i>
+                <h2>Cyber<br>Sentinel</h2>
+            </div>
+            
+            <nav class="nav-menu">
+                <div class="category-title">Ağ Analizi</div>
+                <button class="nav-item active" data-tab="scanner"><i class="fa-solid fa-radar"></i><span>Ping / ICMP</span></button>
+                <button class="nav-item" data-tab="ports"><i class="fa-solid fa-door-open"></i><span>Hızlı Port Tarama</span></button>
+                <button class="nav-item" data-tab="banner"><i class="fa-solid fa-server"></i><span>Derin Port (Banner)</span></button>
+                
+                <div class="category-title">Tehdit İstihbaratı (OSINT)</div>
+                <button class="nav-item" data-tab="breach"><i class="fa-solid fa-envelope-open-text"></i><span>Sızıntı Kontrolü (Email)</span></button>
+                <button class="nav-item" data-tab="vt"><i class="fa-solid fa-shield-virus"></i><span>Güvenli Link Analizi</span></button>
+                
+                <div class="category-title">Sistem & Kod Güvenliği</div>
+                <button class="nav-item" data-tab="sast"><i class="fa-solid fa-code-compare"></i><span>Güvenli Kod Analizi</span></button>
+                <button class="nav-item" data-tab="session-cookie"><i class="fa-solid fa-cookie-bite"></i><span>Oturum & Çerez Analizi</span></button>
+                <button class="nav-item" data-tab="password"><i class="fa-solid fa-key"></i><span>Şifre Güç ve Kırılma Analizörü</span></button>
+
+                <div class="category-title">Donanım & Kripto</div>
+                <button class="nav-item" data-tab="mac"><i class="fa-solid fa-microchip"></i><span>MAC Üretici Bul</span></button>
+                <button class="nav-item" data-tab="crypto"><i class="fa-solid fa-lock"></i><span>Hash Oluşturucu</span></button>
+                <button class="nav-item" data-tab="cipherlab"><i class="fa-solid fa-flask-vial"></i><span>Kriptografi Laboratuvarı</span></button>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <p>&copy; 2026<br><small>Tüm Hakları Saklıdır</small></p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="header">
+                <h1>Operasyon Kontrol Paneli</h1>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <div class="status-badge whoami-badge" id="btn-whoami" title="Uygulama Hakkında">
+                        <i class="fa-solid fa-circle-info"></i> WHO AM I?
+                    </div>
+                    <div class="status-badge" id="global-power" style="cursor: pointer; user-select: none;" title="İstasyon Gücünü Kapat/Aç"><span class="pulse"></span> İstasyon Aktif</div>
+                    <div class="status-badge" id="afk-badge" style="color: var(--accent-cyan); border-color: rgba(0, 240, 255, 0.3); font-family: 'JetBrains Mono', monospace; pointer-events: none;" title="Otomatik Kapanma Sayacı">
+                        <i class="fa-solid fa-user-lock"></i> SİSTEM KİLİDİ: <span id="afk-time">01:00</span>
+                    </div>
+                    <div class="status-badge" id="session-timer-badge" style="color: #a855f7; border-color: rgba(168, 85, 247, 0.3); font-family: 'JetBrains Mono', monospace; pointer-events: none;" title="Oturum (Uptime) Süresi">
+                        <i class="fa-solid fa-stopwatch"></i> OTR: <span id="session-time">00:00:00</span>
+                    </div>
+
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+                <!-- Tabs Implementation -->
+                <!-- Ping Tab (1) -->
+                <section id="scanner" class="tab-content active"><div class="tool-card glass-panel"><div class="card-header"><h3><i class="fa-solid fa-network-wired"></i> Ağ Keşfi (Ping)</h3><p>IP adresinin ağ üzerinde ayakta olup olmadığını kontrol edin.</p></div><div class="input-group"><input type="text" id="ping-target" placeholder="Örn: 192.168.1.1 veya site.com" class="styled-input"><button id="btn-ping" class="btn-primary"><i class="fa-solid fa-bolt"></i> Sonda Gönder</button></div><div class="results-container empty" id="ping-results"></div><button id="btn-ai-ping" class="btn-primary btn-ai-analyze" data-source="ping-results" style="display: none; margin-top: 1rem; background: linear-gradient(90deg, #a855f7, #ec4899); border: none; width: auto;"><i class="fa-solid fa-robot"></i> Yapay Zeka ile Analiz Et</button></div></section>
+
+                <!-- Port Tab (2) -->
+                <section id="ports" class="tab-content">
+                    <div class="tool-card glass-panel">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-door-open"></i> Kritik Port Tarayıcı</h3>
+                            <p>Hedefteki genel kapıları çok hızlı (&lt;2 sn) tarar.</p>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="port-target" placeholder="Hedef IP veya Site" class="styled-input">
+                            <button id="btn-portscan" class="btn-primary"><i class="fa-solid fa-search"></i> Tara</button>
+                        </div>
+                        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                            <div style="flex: 2; min-width: 300px; display: flex; flex-direction: column;">
+                                <div class="results-container empty" id="port-results" style="width: 100%;"></div>
+                                <button id="btn-ai-port" class="btn-primary btn-ai-analyze" data-source="port-results" style="display: none; margin-top: 1rem; background: linear-gradient(90deg, #a855f7, #ec4899); border: none; width: auto; align-self: flex-start;"><i class="fa-solid fa-robot"></i> Yapay Zeka ile Analiz Et</button>
+                            </div>
+                            <div id="port-chart-card" class="glass-panel" style="flex: 1; min-width: 240px; display: none; align-items: center; justify-content: center; flex-direction: column; padding: 2rem; border-radius: 1.5rem; background: rgba(0,0,0,0.2); border-color: rgba(255,255,255,0.02);">
+                                <h4 style="font-size: 0.85rem; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1.5rem; font-weight: 700; text-align: center;"><i class="fa-solid fa-chart-pie"></i> Port Dağılım Grafiği</h4>
+                                <canvas id="port-chart" width="160" height="160" style="max-width: 160px; max-height: 160px;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Banner Grabber Tab (3) -->
+                <section id="banner" class="tab-content"><div class="tool-card glass-panel"><div class="card-header"><h3><i class="fa-solid fa-server"></i> Derin Port Analizi (Banner Grabber)</h3><p>Portun arkasında hangi fiziksel servis ve versiyonunun çalıştığını test eder (Nmap -sV muadili).</p></div><div class="input-group"><input type="text" id="banner-target" placeholder="Hedef (Örn: google.com)" class="styled-input" style="flex:2;"><input type="number" id="banner-port" placeholder="Port (Örn: 80)" class="styled-input" style="flex:1;"><button id="btn-banner" class="btn-primary"><i class="fa-solid fa-fingerprint"></i> Analiz Et</button></div><div class="results-container empty" id="banner-results"></div><button id="btn-ai-banner" class="btn-primary btn-ai-analyze" data-source="banner-results" style="display: none; margin-top: 1rem; background: linear-gradient(90deg, #a855f7, #ec4899); border: none; width: auto;"><i class="fa-solid fa-robot"></i> Yapay Zeka ile Analiz Et</button></div></section>
+
+
+                <!-- Breach Check Tab (5) -->
+                <section id="breach" class="tab-content">
+                    <div class="tool-card glass-panel">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-envelope-open-text"></i> Veri Sızıntısı Kontrolü (Breach Checker)</h3>
+                            <p>E-posta adresinizin daha önce internete sızdırılmış veri tabanlarında (veri sızıntılarında) yer alıp almadığını sorgular (OSINT).</p>
+                        </div>
+                        <div class="input-group">
+                            <input type="email" id="breach-target" placeholder="Örn: eposta@gmail.com" class="styled-input">
+                            <button id="btn-breach" class="btn-primary"><i class="fa-solid fa-magnifying-glass"></i> Kontrol Et</button>
+                        </div>
+                        <div class="results-container empty" id="breach-results"></div>
+                        <button id="btn-ai-breach" class="btn-primary btn-ai-analyze" data-source="breach-results" style="display: none; margin-top: 1rem; background: linear-gradient(90deg, #a855f7, #ec4899); border: none; width: auto;"><i class="fa-solid fa-robot"></i> Yapay Zeka ile Analiz Et</button>
+                    </div>
+                </section>
+
+                <!-- VirusTotal Link Analysis Tab (6) -->
+                <section id="vt" class="tab-content">
+                    <div class="tool-card glass-panel">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-shield-virus"></i> Güvenli Link & Dosya Analizi (VirusTotal)</h3>
+                            <p>Şüpheli bir web adresi (URL) veya dosya hash değerini (MD5/SHA256) taratarak güvenlik durumunu raporlar.</p>
+                        </div>
+                        
+
+
+                        <div class="input-group">
+                            <input type="text" id="vt-target" placeholder="URL veya Dosya Hash (MD5 / SHA256)" class="styled-input">
+                            <button id="btn-vt" class="btn-primary"><i class="fa-solid fa-virus-slash"></i> Analiz Et</button>
+                        </div>
+                        <div class="results-container empty" id="vt-results"></div>
+                        <button id="btn-ai-vt" class="btn-primary btn-ai-analyze" data-source="vt-results" style="display: none; margin-top: 1rem; background: linear-gradient(90deg, #a855f7, #ec4899); border: none; width: auto;"><i class="fa-solid fa-robot"></i> Yapay Zeka ile Analiz Et</button>
+                    </div>
+                </section>
+
+
+                <!-- Güvenli Kod Analizi Tab (8) -->
+                <section id="sast" class="tab-content">
+                    <div class="tool-card glass-panel">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-code-compare"></i> Statik Güvenli Kod Analizcisi (SAST)</h3>
+                            <p>Yazmış olduğunuz Python kodlarını AST (Soyut Sözdizimi Ağacı) analiz motoru ile tarayarak güvenlik zafiyetlerini (RCE, SQLi, Sabit Kodlanmış Şifreler vb.) raporlar.</p>
+                        </div>
+                        <div class="input-group" style="border-radius: 1rem; flex-direction: column; padding: 1rem; gap: 1rem; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05);">
+                            <label style="font-size: 0.85rem; color: var(--accent-cyan); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem;"><i class="fa-brands fa-python"></i> Python Kaynak Kodu Yapıştırın</label>
+                            <textarea id="sast-code" placeholder="import os&#10;import subprocess&#10;&#10;# Zafiyetli kod örneği&#10;api_key = 'sec_key_xyz123' # Sabit kodlanmış parola&#10;eval(input('Hesaplama girin: ')) # RCE açığı&#10;os.system('ping ' + ip) # Komut enjeksiyonu açığı" class="styled-input" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.03); border-radius: 0.5rem; height: 180px; resize: vertical; font-family: 'JetBrains Mono', monospace; padding: 1rem; width: 100%; font-size: 0.95rem; line-height: 1.5; color: #a3e635;"></textarea>
+                            <button id="btn-sast" class="btn-primary" style="align-self: flex-end; width: auto; padding: 0.8rem 2rem;"><i class="fa-solid fa-shield-halved"></i> Kodu Analiz Et (SAST)</button>
+                        </div>
+                        <div class="results-container empty" id="sast-results" style="margin-top: 1.5rem;"></div>
+                        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                            <button id="btn-ai-sast" class="btn-primary btn-ai-analyze" data-source="sast-results" style="display: none; background: linear-gradient(90deg, #a855f7, #ec4899); border: none; width: auto;"><i class="fa-solid fa-robot"></i> Yapay Zeka ile Analiz Et</button>
+                            <button id="btn-ai-triage" class="btn-primary" style="display: none; background: linear-gradient(90deg, #06b6d4, #3b82f6); border: none; width: auto;"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Zafiyet Analizi (Triage)</button>
+                        </div>
+                        <div id="ai-triage-results" class="results-container empty" style="margin-top: 1.5rem; display: none;"></div>
+                    </div>
+                </section>
+
+                <!-- Oturum & Çerez Analizi Tab -->
+                <section id="session-cookie" class="tab-content">
+                    <div class="tool-card glass-panel">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-cookie-bite"></i> Oturum & Çerez Analizi</h3>
+                            <p>Hedef web sitesinin çerez ve oturum yapılandırmasını (HttpOnly, Secure, SameSite, CSP) siber güvenlik perspektifinden denetler.</p>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="session-cookie-target" placeholder="Örn: https://example.com" class="styled-input">
+                            <button id="btn-session-cookie" class="btn-primary"><i class="fa-solid fa-cookie-bite"></i> ANALİZ ET</button>
+                        </div>
+                        <div style="margin-top: 1.5rem;">
+                            <label style="font-size: 0.78rem; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; display: block; margin-bottom: 0.4rem;">
+                                <i class="fa-solid fa-terminal"></i> Terminal Ekranı / Canlı Loglar
+                            </label>
+                            <textarea id="session-cookie-console" readonly class="styled-input" style="width: 100%; height: 350px; font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; color: #a3e635; background: #000000; border: 1px solid rgba(0, 240, 255, 0.15); border-radius: 1rem; resize: vertical; padding: 1.25rem; line-height: 1.6;" placeholder="Test başlatıldığında loglar canlı olarak buraya düşecektir..."></textarea>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Şifre Güç Kontrolü Tab (9) -->
+                <section id="password" class="tab-content">
+                    <div class="tool-card glass-panel">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-key"></i> Şifre Gücü & Entropi Analizcisi</h3>
+                            <p>Parolanızın karakter havuzunu, matematiksel bilgi entropisini (bits), brute-force kırılma süresini ve en yaygın şifreler listesinde yer alıp almadığını kontrol eder.</p>
+                        </div>
+                        <div class="input-group">
+                            <input type="password" id="password-target" placeholder="Gücünü test etmek istediğiniz parolayı girin..." class="styled-input" oninput="this.type = this.type === 'password' ? 'password' : 'text'">
+                            <!-- Show password toggle button -->
+                            <button class="btn-primary" style="background: rgba(255,255,255,0.03); color: var(--text-secondary); box-shadow: none; border: 1px solid rgba(255,255,255,0.05); padding: 0 1.25rem;" onclick="const ip = document.getElementById('password-target'); ip.type = ip.type === 'password' ? 'text' : 'password'; this.innerHTML = ip.type === 'password' ? '<i class=&quot;fa-solid fa-eye&quot;></i>' : '<i class=&quot;fa-solid fa-eye-slash&quot;></i>'"><i class="fa-solid fa-eye"></i></button>
+                            <button id="btn-password" class="btn-primary"><i class="fa-solid fa-calculator"></i> Analiz Et</button>
+                        </div>
+                        
+                        <!-- Dynamic Strength Indicator Bar -->
+                        <div id="password-strength-card" class="glass-panel" style="display: none; padding: 1.75rem; border-radius: 1.5rem; margin-bottom: 1.5rem; background: rgba(0,0,0,0.2); border-color: rgba(255,255,255,0.03);">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; font-weight: 700; font-size: 0.95rem;">
+                                <span style="color: var(--text-primary);">Şifre Güvenlik Düzeyi:</span>
+                                <span id="password-strength-label" style="letter-spacing: 0.05em;">ZAYIF</span>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.05); height: 10px; border-radius: 100vw; overflow: hidden; width: 100%; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
+                                <div id="password-strength-bar" style="height: 100%; width: 25%; background: var(--accent-red); transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s ease; box-shadow: 0 0 10px var(--accent-red);"></div>
+                            </div>
+                        </div>
+
+                        <div class="results-container empty" id="password-results"></div>
+                        <button id="btn-ai-password" class="btn-primary btn-ai-analyze" data-source="password-results" style="display: none; margin-top: 1rem; background: linear-gradient(90deg, #a855f7, #ec4899); border: none; width: auto;"><i class="fa-solid fa-robot"></i> Yapay Zeka ile Analiz Et</button>
+                    </div>
+                </section>
+
+
+
+
+                <!-- MAC Tab (13) -->
+                <section id="mac" class="tab-content"><div class="tool-card glass-panel"><div class="card-header"><h3><i class="fa-solid fa-microchip"></i> Donanım OUI (MAC) Sorgusu</h3><p>Cihazların fiziksel adresinden arka planda hangi üretici (Apple, Intel vb) olduğunu tespit eder.</p></div><div class="input-group"><input type="text" id="mac-target" placeholder="MAC Adresi (00:11:22:33:44:55)" class="styled-input"><button id="btn-mac" class="btn-primary"><i class="fa-solid fa-industry"></i> Donanım Bul</button></div><div class="results-container empty" id="mac-results"></div></div></section>
+
+                <!-- Crypto Tab (14) -->
+                <section id="crypto" class="tab-content">
+                    <div class="tool-card glass-panel">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-key"></i> Kripto & Hash İşlemleri</h3>
+                            <p>Verilerinizi tek yönlü güvenli formatlarda (MD5, SHA1) şifreleyin.</p>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="crypto-target" placeholder="Şifrelenecek Metin..." class="styled-input">
+                            <button id="btn-crypto" class="btn-primary"><i class="fa-solid fa-lock"></i> Kriptola</button>
+                        </div>
+                        <div class="results-container empty" id="crypto-results" style="min-height: 120px;"></div>
+                        
+                        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.05); margin: 2.5rem 0;">
+                        
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-bomb"></i> Hash Kırıcı (Cracker)</h3>
+                            <p>Elinizdeki Hash kodunu sözlük (dictionary) ve bulut saldırısıyla kırmayı dener.</p>
+                        </div>
+                        <div class="input-group">
+                            <select id="crack-type" class="styled-input" style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.5);">
+                                <option value="md5">MD5 Hash</option>
+                                <option value="sha1">SHA1 Hash</option>
+                                <option value="sha256">SHA256 Hash</option>
+                            </select>
+                            <input type="text" id="crack-target" placeholder="Kırılacak Hash Formatı..." class="styled-input" style="flex: 3;">
+                            <button id="btn-crack" class="btn-primary"><i class="fa-solid fa-unlock-keyhole"></i> Şifreyi Kır</button>
+                        </div>
+                        <div class="results-container empty" id="crack-results" style="min-height: 120px;"></div>
+                    </div>
+                </section>
+
+                <!-- Kriptografi Laboratuvarı Tab -->
+                <section id="cipherlab" class="tab-content">
+                    <div class="tool-card glass-panel">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-flask-vial"></i> Kriptografi Laboratuvarı</h3>
+                            <p>Sezar, Vigenère, DES, AES-256 ve RSA algoritmalarını interaktif olarak test edin. Şifreleme ve çözme işlemlerini gerçekleştirin, güvenlik analizini görün.</p>
+                        </div>
+
+                        <!-- Algoritma + Mod Seçimi -->
+                        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem;">
+                            <div style="flex:2; min-width:200px;">
+                                <label style="font-size:0.78rem; color:var(--accent-cyan); text-transform:uppercase; letter-spacing:0.05em; font-weight:700; display:block; margin-bottom:0.4rem;"><i class="fa-solid fa-microchip"></i> Algoritma</label>
+                                <select id="cipher-algo" class="styled-input" style="background:rgba(0,0,0,0.5); width:100%;" onchange="cipherAlgoChanged()">
+                                    <option value="caesar">🔤 Sezar Şifreleme (Caesar Cipher)</option>
+                                    <option value="vigenere">🔑 Vigenère Şifreleme</option>
+                                    <option value="des">🔓 DES — CBC Modu (Zayıf / Akademik)</option>
+                                    <option value="aes">🛡️ AES-256 — CBC Modu (Askeri Standart)</option>
+                                    <option value="rsa">🔐 RSA-2048 (Asimetrik)</option>
+                                </select>
+                            </div>
+                            <div style="flex:1; min-width:180px;">
+                                <label style="font-size:0.78rem; color:var(--accent-magenta); text-transform:uppercase; letter-spacing:0.05em; font-weight:700; display:block; margin-bottom:0.4rem;"><i class="fa-solid fa-arrows-rotate"></i> İşlem Modu</label>
+                                <div style="display:flex; gap:0.5rem;">
+                                    <button id="cipher-mode-enc" onclick="setCipherMode('encrypt')" class="btn-primary" style="flex:1; justify-content:center; font-size:0.82rem; padding:0.65rem; background:linear-gradient(135deg,var(--accent-blue),#7c3aed);"><i class="fa-solid fa-lock"></i> Şifrele</button>
+                                    <button id="cipher-mode-dec" onclick="setCipherMode('decrypt')" class="btn-primary" style="flex:1; justify-content:center; font-size:0.82rem; padding:0.65rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); box-shadow:none;"><i class="fa-solid fa-lock-open"></i> Çöz</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Anahtar Girişi -->
+                        <div id="cipher-key-wrapper" style="margin-bottom:1.25rem;">
+                            <label id="cipher-key-label" style="font-size:0.78rem; color:var(--accent-cyan); text-transform:uppercase; letter-spacing:0.05em; font-weight:700; display:block; margin-bottom:0.4rem;"><i class="fa-solid fa-key"></i> Anahtar / Parola</label>
+                            <input type="text" id="cipher-key" placeholder="Sezar için: 3  |  AES/DES için: Parola  |  RSA için: PEM Key" class="styled-input" style="width:100%;">
+                        </div>
+
+                        <!-- RSA Anahtar Üretici (sadece RSA seçilince görünür) -->
+                        <div id="rsa-keygen-panel" style="display:none; margin-bottom:1.25rem; padding:1.25rem; background:rgba(0,0,0,0.3); border:1px solid rgba(168,85,247,0.2); border-radius:1rem;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                                <span style="color:#a855f7; font-weight:700; font-size:0.88rem;"><i class="fa-solid fa-wand-magic-sparkles"></i> RSA Anahtar Çifti Üretici</span>
+                                <div style="display:flex; gap:0.5rem; align-items:center;">
+                                    <select id="rsa-bits" class="styled-input" style="background:rgba(0,0,0,0.5); padding:0.4rem 0.75rem; font-size:0.8rem; width:auto;">
+                                        <option value="1024">1024-bit (Hızlı)</option>
+                                        <option value="2048" selected>2048-bit (Standart)</option>
+                                        <option value="4096">4096-bit (Güçlü)</option>
+                                    </select>
+                                    <button id="btn-rsa-keygen" class="btn-primary" style="width:auto; padding:0.5rem 1.25rem; font-size:0.82rem; background:linear-gradient(135deg,#a855f7,#6d28d9);"><i class="fa-solid fa-key"></i> Anahtar Çifti Üret</button>
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                                <div>
+                                    <label style="font-size:0.72rem; color:var(--accent-green); font-weight:700; display:block; margin-bottom:0.3rem;"><i class="fa-solid fa-globe"></i> PUBLIC KEY (Şifrelemek için)</label>
+                                    <textarea id="rsa-public-key" class="styled-input" readonly style="height:110px; font-family:'JetBrains Mono',monospace; font-size:0.72rem; resize:none; color:#a3e635; background:rgba(0,0,0,0.5);" placeholder="Buraya Public Key gelecek..."></textarea>
+                                    <button onclick="document.getElementById('cipher-key').value=document.getElementById('rsa-public-key').value" class="btn-primary" style="margin-top:0.4rem; width:100%; font-size:0.75rem; padding:0.4rem; background:rgba(163,230,53,0.1); color:#a3e635; box-shadow:none; border:1px solid rgba(163,230,53,0.2);"><i class="fa-solid fa-arrow-down"></i> Anahtar Alanına Kopyala</button>
+                                </div>
+                                <div>
+                                    <label style="font-size:0.72rem; color:var(--accent-red); font-weight:700; display:block; margin-bottom:0.3rem;"><i class="fa-solid fa-user-secret"></i> PRIVATE KEY (Çözmek için — Gizli Tut!)</label>
+                                    <textarea id="rsa-private-key" class="styled-input" readonly style="height:110px; font-family:'JetBrains Mono',monospace; font-size:0.72rem; resize:none; color:#f43f5e; background:rgba(0,0,0,0.5);" placeholder="Buraya Private Key gelecek..."></textarea>
+                                    <button onclick="document.getElementById('cipher-key').value=document.getElementById('rsa-private-key').value" class="btn-primary" style="margin-top:0.4rem; width:100%; font-size:0.75rem; padding:0.4rem; background:rgba(244,63,94,0.1); color:#f43f5e; box-shadow:none; border:1px solid rgba(244,63,94,0.2);"><i class="fa-solid fa-arrow-down"></i> Anahtar Alanına Kopyala</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Girdi Metin Alanı -->
+                        <div style="margin-bottom:1.25rem;">
+                            <label style="font-size:0.78rem; color:var(--accent-cyan); text-transform:uppercase; letter-spacing:0.05em; font-weight:700; display:block; margin-bottom:0.4rem;"><i class="fa-solid fa-font"></i> Girdi Metni</label>
+                            <textarea id="cipher-input" placeholder="Şifrelenecek veya çözülecek metni buraya girin..." class="styled-input" style="width:100%; height:100px; font-family:'JetBrains Mono',monospace; font-size:0.9rem; resize:vertical;"></textarea>
+                        </div>
+
+                        <button id="btn-cipher-run" class="btn-primary" style="width:100%; justify-content:center; margin-bottom:1.5rem;">
+                            <i class="fa-solid fa-bolt"></i> <span id="btn-cipher-label">Şifrele</span>
+                        </button>
+
+                        <!-- Çıktı Konsolu -->
+                        <div id="cipher-output-wrapper" style="display:none;">
+                            <label style="font-size:0.78rem; color:var(--accent-green); text-transform:uppercase; letter-spacing:0.05em; font-weight:700; display:block; margin-bottom:0.4rem;"><i class="fa-solid fa-terminal"></i> Sonuç Çıktısı</label>
+                            <div style="position:relative;">
+                                <textarea id="cipher-output" readonly class="styled-input" style="width:100%; height:120px; font-family:'JetBrains Mono',monospace; font-size:0.88rem; color:#a3e635; background:rgba(0,0,0,0.7); border-color:rgba(163,230,53,0.15); resize:vertical;"></textarea>
+                                <button onclick="navigator.clipboard.writeText(document.getElementById('cipher-output').value)" title="Kopyala" style="position:absolute; top:0.5rem; right:0.5rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-secondary); border-radius:0.4rem; padding:0.3rem 0.6rem; cursor:pointer; font-size:0.75rem;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-secondary)'">
+                                    <i class="fa-solid fa-copy"></i>
+                                </button>
+                            </div>
+
+                            <!-- Güvenlik Analiz Notu -->
+                            <div id="cipher-analysis" style="margin-top:1rem; padding:1rem 1.25rem; border-radius:0.75rem; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.05); font-family:'JetBrains Mono',monospace; font-size:0.82rem; color:var(--text-secondary); white-space:pre-wrap; line-height:1.7;"></div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Floating AI Assistant Widget -->
+    <div id="ai-widget-container" style="position: fixed; bottom: 2rem; right: 2rem; z-index: 9999; font-family: 'Inter', sans-serif;">
+        <!-- Floating Bubble Button -->
+        <button id="btn-ai-bubble" style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-magenta), var(--accent-blue)); border: none; color: #fff; font-size: 1.5rem; cursor: pointer; box-shadow: 0 0 25px rgba(255, 0, 100, 0.4); display: flex; align-items: center; justify-content: center; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); outline: none; position: relative;">
+            <i class="fa-solid fa-robot" id="ai-bubble-icon"></i>
+            <span style="position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 2px solid var(--accent-magenta); animation: pulsing 2s infinite; pointer-events: none; opacity: 0.6;"></span>
+        </button>
+
+        <!-- Chat Window Popup (hidden initially) -->
+        <div id="ai-chat-window" class="glass-panel" style="display: none; position: absolute; bottom: 75px; right: 0; width: 380px; height: 520px; flex-direction: column; background: rgba(10, 12, 16, 0.95); border: 1px solid rgba(0, 240, 255, 0.15); border-radius: 1.5rem; box-shadow: 0 15px 40px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5); overflow: hidden; transition: all 0.3s ease;">
+            <!-- Chat Header -->
+            <div style="padding: 1.25rem; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 0.50rem;">
+                    <i class="fa-solid fa-robot" style="color: var(--accent-cyan); font-size: 1.2rem; filter: drop-shadow(0 0 5px rgba(0,240,255,0.5));"></i>
+                    <div>
+                        <h4 style="margin: 0; color: #fff; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.05em;">AI Güvenlik Asistanı</h4>
+                        <span style="font-size: 0.7rem; color: var(--accent-cyan); font-weight: 600; display: flex; align-items: center; gap: 0.25rem;"><span class="pulse" style="width: 6px; height: 6px; background: var(--accent-cyan);"></span> Çevrimiçi</span>
+                    </div>
+                </div>
+                <button id="btn-chat-close" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1rem; transition: color 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-secondary)'"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+
+
+            <!-- Messages Content Area -->
+            <div id="chat-messages" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.85rem; padding: 1.25rem; scroll-behavior: smooth;">
+                <div class="chat-message system" style="background: rgba(0, 240, 255, 0.03); border-left: 3px solid var(--accent-cyan); padding: 1rem; border-radius: 0.75rem; color: var(--text-secondary); font-size: 0.82rem; line-height: 1.6;">
+                    <div style="font-weight: 800; color: var(--accent-cyan); margin-bottom: 0.5rem; font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem;">
+                        <i class="fa-solid fa-shield-halved" style="animation: pulsing 1.5s infinite;"></i> Cyber Sentinel AI Çevrimiçi!
+                    </div>
+                    <p style="margin-bottom: 0.75rem; color: var(--text-primary);">Siber Güvenlik Kontrol Merkezine Hoş Geldiniz! Ben sizin yerleşik AI güvenlik danışmanınızım. Bu istasyonda gerçekleştireceğiniz tüm operasyonları ve teknik bulguları analiz etmek üzere hazırlandım.</p>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 0.5rem; border: 1px solid rgba(0, 240, 255, 0.05);">
+                        <strong style="color: #fff; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em;"><i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-magenta);"></i> Yeteneklerim:</strong>
+                        <ul style="margin: 0; padding-left: 1.1rem; list-style-type: square; display: flex; flex-direction: column; gap: 0.35rem;">
+                            <li><strong style="color:var(--accent-cyan);">Ağ & Port Tarama Analizi:</strong> Hızlı ve derin port bulgularını yorumlar, riskleri ve açık servis zafiyetlerini açıklar.</li>
+                            <li><strong style="color:var(--accent-magenta);">SAST & Derin Triyaj (Triage):</strong> Python kodlarınızdaki açıkları tarayıp ciddiyet puanı (1-100) çıkarır, zafiyetsiz kod alternatifini üretir.</li>
+                            <li><strong style="color:var(--accent-blue);">Sızıntı & Tehdit İstihbaratı:</strong> E-posta sızıntı detaylarını ve VirusTotal dosya/link analizi sonuçlarını siber risk perspektifinden değerlendirir.</li>
+                            <li><strong style="color:var(--accent-green);">Karakteristik Güvenlik & Şifre:</strong> Parola entropi değerlerini ve brute-force dayanıklılığını açıklayarak güvenlik önerileri sunar.</li>
+                        </ul>
+                    </div>
+                    <p style="margin-top: 0.75rem; font-style: italic; color: rgba(255,255,255,0.4);">Sitedeki herhangi bir taramayı tamamladıktan sonra altındaki <strong>"Yapay Zeka ile Analiz Et"</strong> butonuna basabilir veya bana doğrudan sorularınızı yöneltebilirsiniz!</p>
+                </div>
+            </div>
+
+            <!-- Prompt Helper Quick Buttons -->
+            <div class="prompt-helpers" style="display: flex; gap: 0.35rem; padding: 0.5rem 1rem; overflow-x: auto; border-top: 1px solid rgba(255,255,255,0.03); background: rgba(0,0,0,0.1); scrollbar-width: none;">
+                <button class="btn-quick-prompt btn-primary" style="background: rgba(255,255,255,0.02); color: var(--accent-cyan); font-size: 0.72rem; padding: 0.3rem 0.75rem; border: 1px solid rgba(255,255,255,0.05); box-shadow: none; white-space: nowrap; width: auto;" data-prompt="OWASP Top 10 nedir?">OWASP Top 10</button>
+                <button class="btn-quick-prompt btn-primary" style="background: rgba(255,255,255,0.02); color: var(--accent-magenta); font-size: 0.72rem; padding: 0.3rem 0.75rem; border: 1px solid rgba(255,255,255,0.05); box-shadow: none; white-space: nowrap; width: auto;" data-prompt="Sızma testi aşamaları nelerdir?">Sızma Testi</button>
+                <button class="btn-quick-prompt btn-primary" style="background: rgba(255,255,255,0.02); color: var(--accent-blue); font-size: 0.72rem; padding: 0.3rem 0.75rem; border: 1px solid rgba(255,255,255,0.05); box-shadow: none; white-space: nowrap; width: auto;" data-prompt="SQL Injection nasıl engellenir?">SQLi Koruması</button>
+            </div>
+
+            <!-- Chat Input Area -->
+            <div class="chat-input-group" style="display: flex; gap: 0.4rem; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding: 0.85rem 1.25rem; background: rgba(0,0,0,0.2);">
+                <input type="text" id="chat-input" placeholder="Sorunuzu yazın..." class="styled-input" style="flex: 1; padding: 0.6rem 0.85rem; font-size: 0.85rem;">
+                <button id="btn-chat-send" class="btn-primary" style="padding: 0.6rem 1.1rem; font-weight: 700; width: auto; font-size: 0.85rem;"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
