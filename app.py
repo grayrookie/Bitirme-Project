@@ -23,10 +23,47 @@ app = Flask(__name__,
             template_folder=os.path.join(base_path, "templates"),
             static_folder=os.path.join(base_path, "static"))
 
+# global isolation flag
+is_network_isolated = False
+
+@app.before_request
+def check_isolation():
+    global is_network_isolated
+    if is_network_isolated:
+        # Allow static files, home page, and kill switch API routes
+        allowed_prefixes = ['/static/', '/api/security/kill-switch']
+        if request.path != '/' and not any(request.path.startswith(prefix) for prefix in allowed_prefixes):
+            return jsonify({"error": "[-] HATA: Ağ arabirimleri kapalı. İzole modda tarama yapılamaz!"}), 400
+
+@app.route("/api/security/kill-switch", methods=["POST"])
+def toggle_kill_switch():
+    global is_network_isolated
+    is_network_isolated = not is_network_isolated
+    return jsonify({"is_network_isolated": is_network_isolated})
+
+@app.route("/api/security/kill-switch/status", methods=["GET"])
+def get_kill_switch_status():
+    global is_network_isolated
+    return jsonify({"is_network_isolated": is_network_isolated})
+
+
 # API Keys Configuration (Yönetici buraya kendi anahtarlarını yazabilir veya .env dosyasını kullanabilir)
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 VIRUSTOTAL_API_KEY = os.environ.get("VIRUSTOTAL_API_KEY", "")
 HIBP_API_KEY = os.environ.get("HIBP_API_KEY", "")
+IPINFO_TOKEN = os.environ.get("IPINFO_TOKEN", "123456789abc")
+
+# IPinfo global handler initialization with 24h TTL and 4096 entries cache options
+try:
+    import ipinfo
+    ipinfo_handler = ipinfo.getHandler(
+        IPINFO_TOKEN,
+        cache_options={'ttl': 86400, 'maxsize': 4096}
+    )
+except Exception as e:
+    print(f"[-] IPinfo Handler başlatma hatası: {e}")
+    ipinfo_handler = None
+
 
 def vt_resmi_yapilandirma_olustur():
     """
@@ -92,9 +129,100 @@ COMMON_PORTS = {
     8080: "HTTP-Proxy"
 }
 
+DEFAULT_USER_CONFIG = {
+    "main_dashboard": True,
+    "ping_icmp": True,
+    "port_scan": True,
+    "banner_grab": True,
+    "dos_stress": True,
+    "osint_leak": True,
+    "vt_analysis": True,
+    "sast_code": True,
+    "session_cookie": True,
+    "password_strength": True,
+    "mac_lookup": True,
+    "hash_generator": True,
+    "cipher_lab": True
+}
+
+
+def load_user_config():
+    import json
+    import os
+    config_path = os.path.join(base_path, "user_config.json")
+    if not os.path.exists(config_path):
+        try:
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(DEFAULT_USER_CONFIG, f, indent=4)
+        except Exception as e:
+            print(f"[-] Config oluşturma hatası: {e}")
+        return DEFAULT_USER_CONFIG
+    else:
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config_data = json.load(f)
+                
+                # Eski açılış bayrağı ile uyumluluk kontrolü
+                if "is_first_open" in config_data and "main_dashboard" not in config_data:
+                    config_data["main_dashboard"] = config_data.get("is_first_open", True)
+                
+                updated = False
+                for k, v in DEFAULT_USER_CONFIG.items():
+                    if k not in config_data:
+                        config_data[k] = True
+                        updated = True
+                if updated:
+                    with open(config_path, "w", encoding="utf-8") as f:
+                        json.dump(config_data, f, indent=4)
+                return config_data
+        except:
+            return DEFAULT_USER_CONFIG
+
+def save_user_config(config_data):
+    import json
+    import os
+    config_path = os.path.join(base_path, "user_config.json")
+    try:
+        with open(config_path, "w", encoding="utf-8") as f:
+            json.dump(config_data, f, indent=4)
+        return True
+    except Exception as e:
+        print(f"[-] Config kaydetme hatası: {e}")
+        return False
+
+
 @app.route("/")
 def index():
-    return render_template("index.html")
+    config = load_user_config()
+    is_first_open = config.get("main_dashboard", True)
+    return render_template("index.html", is_first_open=is_first_open)
+
+@app.route("/api/security/complete-tutorial", methods=["POST"])
+def complete_tutorial():
+    config = load_user_config()
+    config["main_dashboard"] = False
+    save_user_config(config)
+    return jsonify({"success": True})
+
+@app.route("/api/security/tutorial/status", methods=["GET"])
+def get_tutorial_status():
+    config = load_user_config()
+    return jsonify(config)
+
+@app.route("/api/security/tutorial/complete", methods=["POST"])
+def complete_module_tutorial():
+    data = request.json or {}
+    module_name = data.get("module")
+    if not module_name:
+        return jsonify({"error": "Modül adı belirtilmedi."}), 400
+    
+    config = load_user_config()
+    if module_name in config:
+        config[module_name] = False
+        save_user_config(config)
+    return jsonify({"success": True, "config": config})
+
+
 
 @app.route("/api/scan/ping", methods=["POST"])
 def ping_scan():
@@ -122,6 +250,7 @@ def ping_scan():
     output_lines.append(f"[+] Temizlenen Hedef IP/Domain: {target}")
 
     scan_result = {"alive": False, "error": None}
+    ipinfo_output_lines = []
 
     def ping_motoru():
         try:
@@ -134,13 +263,18 @@ def ping_scan():
             for veri in cevaplar:
                 if veri.success:
                     success_count += 1
-                    output_lines.append(f"[+] Yanıt geldi: Boyut={veri.message_size} byte | Süre={int(veri.time_elapsed * 1000)}ms")
+                    try:
+                        boyut = len(veri.message.packet.raw) if (veri.message and veri.message.packet) else 32
+                    except:
+                        boyut = 32
+                    output_lines.append(f"[+] Yanıt geldi: Boyut={boyut} byte | Süre={int(veri.time_elapsed * 1000)}ms")
                 else:
                     output_lines.append("[-] İstek Zaman Aşımına Uğradı (Request Timed Out)!")
+
             
             scan_result["alive"] = success_count > 0
 
-            # Tarama sonu genel istatistik raporu (Jürinin çok sevdiği akademik kısım)
+            # Tarama sonu genel istatistik raporu
             output_lines.append(f"\n--- {target} Ping İstatistikleri ---")
             output_lines.append(f"└── [En Düşük Gecikme]: {int(cevaplar.rtt_min * 1000)} ms")
             output_lines.append(f"└── [En Yüksek Gecikme]: {int(cevaplar.rtt_max * 1000)} ms")
@@ -154,17 +288,75 @@ def ping_scan():
             output_lines.append("[💡] ÇÖZÜM: Projenizi (Cursor / Terminal) 'Yönetici Olarak Çalıştır' modunda açtığınızdan emin olun.")
             scan_result["error"] = str(e)
 
-    # Arayüzün donmasını engelleyen Thread yapısı
+    def ipinfo_motoru():
+        if not ipinfo_handler:
+            ipinfo_output_lines.append("[-] Hata: IPinfo motoru başlatılamadı.")
+            return
+
+        try:
+            # Token geçersizliği veya limit aşımı durumunda yedek (Fallback) olarak şifresiz handler deniyoruz
+            try:
+                details = ipinfo_handler.getDetails(target)
+            except Exception:
+                # Ücretsiz ve anahtarsız yedek işleyiciye geç
+                fallback_handler = ipinfo.getHandler()
+                details = fallback_handler.getDetails(target)
+
+            # Nesne üzerinden nitelikleri (Attributes) güvenli bir şekilde çekiyoruz
+            ulke_adi = getattr(details, 'country_name', 'Bilinmiyor')
+            sehir = getattr(details, 'city', 'Bilinmiyor')
+            bölge = getattr(details, 'region', 'Bilinmiyor')
+            posta_kodu = getattr(details, 'postal', 'Bilinmiyor')
+            koordinat = getattr(details, 'loc', 'Bilinmiyor')
+            
+            # ASN / Ağ Operatörü Ayrıştırma
+            asn_adi = "Bilinmiyor"
+            if hasattr(details, 'asn') and isinstance(details.asn, dict):
+                asn_adi = details.asn.get('name', 'Bilinmiyor')
+            elif hasattr(details, 'org') and details.org:
+                asn_adi = details.org # Temel planda düz string gelir
+                
+            # Şirket / Altyapı Şirketi Ayrıştırma
+            sirket_adi = "Belirlenemedi (Kurumsal Veri Yok)"
+            if hasattr(details, 'company') and isinstance(details.company, dict):
+                sirket_adi = details.company.get('name', 'Belirlenemedi')
+
+            # --- SİBER OPERASYON KONSOL ÇIKTISI ---
+            # Sınır çizgileri visual simetri için tam 70 karakter uzunluğundadır
+            sinir = "=" * 70
+            ipinfo_output_lines.append(f"\n{sinir}")
+            ipinfo_output_lines.append(f"[🌐 CYBER SENTINEL OSINT]: {target} Tehdit İstihbarat Raporu")
+            ipinfo_output_lines.append(sinir)
+            ipinfo_output_lines.append(f"├── 🗺️ Ülke / Bölge   : {ulke_adi} ({bölge})")
+            ipinfo_output_lines.append(f"├── 🌆 Şehir / Posta   : {sehir} / {posta_kodu}")
+            ipinfo_output_lines.append(f"├── 🏢 Ağ Operatörü(ASN): {asn_adi}")
+            ipinfo_output_lines.append(f"├── 🏬 Altyapı Şirketi : {sirket_adi}")
+            ipinfo_output_lines.append(f"└── 📍 Harita Koordinat: {koordinat}")
+            ipinfo_output_lines.append(f"{sinir}\n")
+
+        except Exception as e:
+            ipinfo_output_lines.append(f"\n[-] IPinfo Coğrafi İstihbarat Hatası: {e}\n")
+
+    # Arayüzün donmasını engelleyen eş zamanlı (Concurrent) Thread yapısı
     ping_thread = threading.Thread(target=ping_motoru)
+    ipinfo_thread = threading.Thread(target=ipinfo_motoru)
+    
     ping_thread.start()
+    ipinfo_thread.start()
+    
     ping_thread.join()
+    ipinfo_thread.join()
+
+    # Çıktıları birleştirerek istemciye iletiyoruz
+    full_output = "\n".join(output_lines) + "\n" + "\n".join(ipinfo_output_lines)
 
     return jsonify({
         "target": target,
         "alive": scan_result["alive"],
-        "output": "\n".join(output_lines),
+        "output": full_output,
         "error": scan_result["error"]
     })
+
 
 
 def scan_single_port(target, port):
@@ -728,7 +920,6 @@ def passive_recon_lookup():
                     lines.append(f"└── [Tespit Edilen Portlar]: {port_str}")
                 else:
                     lines.append("└── [Durum]: Açık port bulunamadı.")
-                
                 lines.append("\n[🚨] TESPİT EDİLEN KÜRESEL ZAFİYETLER (CVE):")
                 if cve_kodlari:
                     lines.append(f"└── [Kritik CVE Sayısı]: {len(cve_kodlari)} adet açık bulundu!")
@@ -1887,453 +2078,6 @@ def rsa_keygen():
         return jsonify({"error": f"Anahtar üretimi başarısız: {str(e)}"}), 500
 
 
-# ─────────────────────────────────────────────────────────────
-# DOS STRES TESTİ ENDPOINTİ
-# ─────────────────────────────────────────────────────────────
-@app.route("/api/stress/dos", methods=["POST"])
-def dos_stress_test():
-    import time as _time
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-    import urllib3
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-    data         = request.json
-    target_url   = data.get("url", "").strip()
-    thread_count = min(int(data.get("threads", 5)), 20)    # Maks 20 thread
-    req_count    = min(int(data.get("requests", 20)), 100)  # Maks 100 istek
-
-    if not target_url:
-        return jsonify({"error": "URL belirtilmedi."}), 400
-    if not target_url.startswith(("http://", "https://")):
-        target_url = "http://" + target_url
-
-    results = []
-
-    def make_request(idx):
-        try:
-            t0 = _time.time()
-            r  = requests.get(target_url, timeout=5, verify=False, allow_redirects=True)
-            ms = round((_time.time() - t0) * 1000, 1)
-            return {"index": idx, "status": r.status_code, "time_ms": ms, "success": True}
-        except Exception as e:
-            return {"index": idx, "status": 0, "time_ms": 0, "success": False, "error": str(e)[:60]}
-
-    with ThreadPoolExecutor(max_workers=thread_count) as ex:
-        futures = [ex.submit(make_request, i) for i in range(req_count)]
-        for fut in as_completed(futures):
-            results.append(fut.result())
-
-    results.sort(key=lambda x: x["index"])
-    times        = [r["time_ms"] for r in results if r["success"] and r["time_ms"] > 0]
-    success_cnt  = sum(1 for r in results if r["success"])
-
-    return jsonify({
-        "results":  results,
-        "summary": {
-            "total":    req_count,
-            "success":  success_cnt,
-            "failed":   req_count - success_cnt,
-            "avg_ms":   round(sum(times) / len(times), 1) if times else 0,
-            "min_ms":   min(times) if times else 0,
-            "max_ms":   max(times) if times else 0,
-            "target":   target_url
-        }
-    })
-
-
-# ─────────────────────────────────────────────────────────────
-# OTURUM & ÇEREZ ANALİZİ (XSS / Güvenlik Başlıkları)
-# ─────────────────────────────────────────────────────────────
-@app.route("/api/security/session-check", methods=["POST"])
-def session_check():
-    import urllib3
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-    target_url = request.json.get("target", "").strip()
-    if not target_url:
-        return jsonify({"error": "URL belirtilmedi."}), 400
-    if not target_url.startswith(("http://", "https://")):
-        target_url = "https://" + target_url
-
-    try:
-        r       = requests.get(target_url, timeout=8, verify=False, allow_redirects=True)
-        headers = dict(r.headers)
-        cookies = r.cookies
-
-        findings   = []
-        score      = 100
-        cookie_list = []
-
-        for ck in cookies:
-            is_httponly = ck.has_nonstandard_attr("HttpOnly")
-            is_secure   = bool(ck.secure)
-            cookie_list.append({
-                "name":     ck.name,
-                "value":    (ck.value[:20] + "...") if len(ck.value) > 20 else ck.value,
-                "httponly": is_httponly,
-                "secure":   is_secure,
-                "domain":   ck.domain or "N/A"
-            })
-            if not is_secure:
-                findings.append({"severity": "YÜKSEK",
-                                  "issue": f"'{ck.name}' çerezi Secure bayrağı taşımıyor",
-                                  "detail": "HTTP üzerinden gönderilebilir; MitM saldırısında ele geçirilebilir."})
-                score -= 15
-            if not is_httponly:
-                findings.append({"severity": "YÜKSEK",
-                                  "issue": f"'{ck.name}' çerezi HttpOnly bayrağı taşımıyor",
-                                  "detail": "JavaScript erişimine açık; XSS saldırısıyla çalınabilir."})
-                score -= 15
-
-        SEC_HEADERS = {
-            "Content-Security-Policy":   ("YÜKSEK", "XSS ve veri enjeksiyonunu engeller."),
-            "X-Frame-Options":           ("ORTA",   "Clickjacking saldırılarını engeller."),
-            "X-Content-Type-Options":    ("ORTA",   "MIME-sniffing saldırılarını engeller."),
-            "Strict-Transport-Security": ("YÜKSEK", "SSL stripping ve HTTPS zorlaması sağlar."),
-            "X-XSS-Protection":          ("DÜŞÜK",  "Tarayıcı XSS filtrelerini aktive eder."),
-            "Referrer-Policy":           ("DÜŞÜK",  "Referrer bilgisi sızıntısını önler."),
-            "Permissions-Policy":        ("DÜŞÜK",  "Kamera/Mikrofon API erişimlerini kısıtlar."),
-        }
-        found_headers = {}
-        for hname, (sev, detail) in SEC_HEADERS.items():
-            val = headers.get(hname, "")
-            found_headers[hname] = val if val else None
-            if not val:
-                findings.append({"severity": sev, "issue": f"Eksik güvenlik başlığı: {hname}", "detail": detail})
-                score -= {"YÜKSEK": 20, "ORTA": 10, "DÜŞÜK": 5}[sev]
-
-        return jsonify({
-            "target":         target_url,
-            "status_code":    r.status_code,
-            "cookies":        cookie_list,
-            "sec_headers":    found_headers,
-            "findings":       findings,
-            "security_score": max(0, score)
-        })
-    except Exception as e:
-        return jsonify({"error": f"Bağlantı hatası: {str(e)}"}), 500
-
-
-# ─────────────────────────────────────────────────────────────
-# YENİ MODÜL: OTURUM & ÇEREZ ANALİZİ (CANLI KONSOL VE THREADING)
-# ─────────────────────────────────────────────────────────────
-import uuid
-import threading
-
-cookie_analysis_logs = {}
-
-@app.route("/api/security/cookie-analyze", methods=["POST"])
-def cookie_analyze():
-    target_url = request.json.get("target", "").strip()
-    if not target_url:
-        return jsonify({"error": "URL belirtilmedi."}), 400
-        
-    if not target_url.startswith(("http://", "https://")):
-        target_url = "https://" + target_url
-
-    analysis_id = str(uuid.uuid4())
-    cookie_analysis_logs[analysis_id] = []
-
-    def background_analysis(url, aid):
-        logs = cookie_analysis_logs[aid]
-        logs.append("[+] Oturum Güvenliği Analizi Başlatıldı...")
-        logs.append(f"[+] Hedef: {url}")
-        try:
-            import urllib3
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            
-            # Siteye istek gönderiyoruz
-            response = requests.get(url, timeout=5, verify=False, allow_redirects=True)
-            logs.append(f"[+] Yanıt alındı. Durum Kodu: {response.status_code}")
-            
-            # 1. CSP (Content Security Policy) Kontrolü
-            csp_found = False
-            # Büyük/küçük harf duyarlılığını aşmak için başlıkları küçük harfe çevirip arıyoruz
-            headers_lower = {k.lower(): v for k, v in response.headers.items()}
-            
-            if 'content-security-policy' in headers_lower:
-                csp_found = True
-            
-            if not csp_found:
-                logs.append("[!] KRİTİK: Sitede Content-Security-Policy (CSP) koruması bulunamadı! (XSS ve kod enjeksiyonu riski!)")
-            else:
-                logs.append("[+] OK: Content-Security-Policy (CSP) koruması aktif.")
-
-            # 2. Çerez (Cookie) Politikaları Kontrolü
-            if not response.cookies:
-                logs.append("[-] Bilgi: Hedef site bu istek için herhangi bir çerez (cookie) bırakmadı.")
-            else:
-                for cookie in response.cookies:
-                    logs.append(f"\n--- Çerez Analizi: {cookie.name} ---")
-                    
-                    # HttpOnly Kontrolü (Hata vermeyen standart yöntem)
-                    is_httponly = False
-                    if cookie._rest and 'httponly' in [k.lower() for k in cookie._rest.keys()]:
-                        is_httponly = True
-                    
-                    if not is_httponly:
-                        logs.append(f"[!] UYARI: '{cookie.name}' çerezinde HttpOnly bayrağı eksik! (XSS ile oturum çalınabilir!)")
-                    else:
-                        logs.append(f"[+] OK: '{cookie.name}' çerezi HttpOnly ile korunuyor.")
-                        
-                    # Secure Kontrolü
-                    if not cookie.secure:
-                        logs.append(f"[!] UYARI: '{cookie.name}' çerezinde Secure bayrağı eksik! (Ağ koklayıcılar şifresiz çekebilir!)")
-                    else:
-                        logs.append(f"[+] OK: '{cookie.name}' çerezi Secure (Şifreli) modda.")
-                        
-                    # SameSite Kontrolü
-                    samesite_attrs = []
-                    if cookie._rest:
-                        samesite_attrs = [v for k, v in cookie._rest.items() if k.lower() == 'samesite']
-                    if not samesite_attrs:
-                        logs.append(f"[!] UYARI: '{cookie.name}' çerezinde SameSite özniteliği eksik! (CSRF riski!)")
-                    else:
-                        logs.append(f"[+] OK: '{cookie.name}' çerezi SameSite={samesite_attrs[0]} değerine sahip.")
-                        
-            logs.append("\n[+] Analiz Başarıyla Tamamlandı.")
-            
-        except requests.exceptions.RequestException as e:
-            logs.append(f"[Hata]: Web sitesine bağlanılamadı. Geçerli bir URL girdiğinizden emin olun. Detay: {e}")
-        except Exception as e:
-            logs.append(f"[Hata]: Analiz sırasında beklenmeyen bir hata oluştu: {e}")
-
-    # Threading ile arka planda çalıştırıyoruz
-    thread = threading.Thread(target=background_analysis, args=(target_url, analysis_id))
-    thread.daemon = True
-    thread.start()
-
-    return jsonify({"analysis_id": analysis_id})
-
-@app.route("/api/security/cookie-analyze/logs/<analysis_id>", methods=["GET"])
-def cookie_analyze_logs(analysis_id):
-    logs = cookie_analysis_logs.get(analysis_id)
-    if logs is None:
-        return jsonify({"error": "Geçersiz analiz kimliği."}), 404
-        
-    is_done = False
-    if len(logs) > 0 and (logs[-1] == "[+] Analiz Tamamlandı." or logs[-1].startswith("[Hata]")):
-        is_done = True
-        
-    return jsonify({
-        "logs": logs,
-        "done": is_done
-    })
-
-
-
-# ─────────────────────────────────────────────────────────────
-# SHODAN IP KEŞFİ (OSINT)
-# ─────────────────────────────────────────────────────────────
-@app.route("/api/osint/shodan", methods=["POST"])
-def shodan_lookup():
-    target_ip = request.json.get("target", "").strip()
-    api_key   = os.environ.get("SHODAN_API_KEY", "")
-
-    if not target_ip:
-        return jsonify({"error": "IP adresi belirtilmedi."}), 400
-
-    if api_key:
-        try:
-            import shodan as _shodan
-            api  = _shodan.Shodan(api_key)
-            host = api.host(target_ip)
-            return jsonify({
-                "ip":        target_ip,
-                "country":   host.get("country_name", "Bilinmiyor"),
-                "city":      host.get("city", "Bilinmiyor"),
-                "org":       host.get("org", "Bilinmiyor"),
-                "isp":       host.get("isp", "Bilinmiyor"),
-                "os":        host.get("os", "Bilinmiyor"),
-                "hostnames": host.get("hostnames", []),
-                "open_ports":host.get("ports", []),
-                "services":  [{"port": s.get("port"), "transport": s.get("transport","tcp"),
-                                "product": s.get("product",""), "version": s.get("version",""),
-                                "banner": s.get("data","")[:100]}
-                               for s in host.get("data", [])[:10]],
-                "real_api":  True
-            })
-        except Exception:
-            pass  # API yoksa simülasyona düş
-
-    # Simülasyon modu
-    return jsonify({
-        "ip":         target_ip,
-        "country":    "Türkiye (Simüle)",
-        "city":       "İstanbul",
-        "org":        "Türk Telekom A.Ş.",
-        "isp":        "TurkNet",
-        "os":         "Linux 4.x",
-        "hostnames":  [f"host-{target_ip.replace('.', '-')}.example.com"],
-        "open_ports": [22, 80, 443, 3306],
-        "services": [
-            {"port": 22,  "transport": "tcp", "product": "OpenSSH", "version": "8.2p1", "banner": "SSH-2.0-OpenSSH_8.2p1 Ubuntu"},
-            {"port": 80,  "transport": "tcp", "product": "nginx",   "version": "1.18.0", "banner": "HTTP/1.1 200 OK Server: nginx"},
-            {"port": 443, "transport": "tcp", "product": "nginx",   "version": "1.18.0", "banner": "TLS/1.3 cipher TLS_AES_256_GCM"},
-            {"port": 3306,"transport": "tcp", "product": "MySQL",   "version": "8.0.28",  "banner": "8.0.28-MySQL Community Server"}
-        ],
-        "real_api":       False,
-        "simulation_msg": "SHODAN_API_KEY .env dosyasında tanımlı değil. Simüle veri gösterilmektedir."
-    })
-
-
-# ─────────────────────────────────────────────────────────────
-# SSL/TLS SERTİFİKA DOĞRULAYICI
-# ─────────────────────────────────────────────────────────────
-@app.route("/api/security/ssl-check", methods=["POST"])
-def ssl_check():
-    import ssl as _ssl
-    import socket as _sock
-    import datetime
-
-    target = request.json.get("target", "").strip()
-    if not target:
-        return jsonify({"error": "Hedef belirtilmedi."}), 400
-    target = clean_target_domain(target)
-
-    try:
-        ctx = _ssl.create_default_context()
-        with _sock.create_connection((target, 443), timeout=8) as raw:
-            with ctx.wrap_socket(raw, server_hostname=target) as ssock:
-                cert    = ssock.getpeercert()
-                tls_ver = ssock.version()
-                cipher  = ssock.cipher()
-
-        def parse_dt(s):
-            try:    return datetime.datetime.strptime(s, "%b %d %H:%M:%S %Y %Z")
-            except: return None
-
-        not_after  = cert.get("notAfter", "")
-        not_before = cert.get("notBefore", "")
-        expiry_dt  = parse_dt(not_after)
-        now        = datetime.datetime.utcnow()
-        days_left  = (expiry_dt - now).days if expiry_dt else None
-
-        def flat(tup_list):
-            return {k: v for tup in tup_list for k, v in tup}
-
-        issuer  = flat(cert.get("issuer", []))
-        subject = flat(cert.get("subject", []))
-        sans    = [v for t, v in cert.get("subjectAltName", []) if t == "DNS"]
-
-        if days_left is None:         status = "BİLİNMİYOR"
-        elif days_left < 0:           status = "SÜRESİ DOLMUŞ"
-        elif days_left < 30:          status = "YAKINDA DOLACAK"
-        else:                         status = "GEÇERLİ"
-
-        return jsonify({
-            "target":       target,
-            "status":       status,
-            "days_left":    days_left,
-            "tls_version":  tls_ver,
-            "cipher_suite": cipher[0] if cipher else "Bilinmiyor",
-            "not_before":   not_before,
-            "not_after":    not_after,
-            "issuer_cn":    issuer.get("commonName", "Bilinmiyor"),
-            "issuer_org":   issuer.get("organizationName", "Bilinmiyor"),
-            "subject_cn":   subject.get("commonName", target),
-            "sans":         sans[:10],
-        })
-    except _ssl.SSLCertVerificationError as e:
-        return jsonify({"error": f"SSL Doğrulama Hatası: {str(e)}", "status": "GEÇERSİZ"})
-    except Exception as e:
-        return jsonify({"error": f"SSL Bağlantı Hatası: {str(e)}", "status": "HATA"}), 500
-
-
-# ─────────────────────────────────────────────────────────────
-# WEB SUNUCU YÜK & STRES TESTİ (DoS RİSK ANALİZİ)
-# ─────────────────────────────────────────────────────────────
-@app.route("/api/security/stress-test", methods=["POST"])
-def web_stress_test():
-    import time
-    import threading
-    
-    target_url = request.json.get("target", "").strip()
-    req_count_val = request.json.get("count", 100)
-    
-    if not target_url:
-        return jsonify({"error": "Hedef URL belirtilmedi."}), 400
-        
-    try:
-        req_count = int(req_count_val)
-    except ValueError:
-        req_count = 100
-        
-    if req_count < 1 or req_count > 2000:
-        return jsonify({"error": "İstek sayısı 1-2000 arasında olmalıdır."}), 400
-
-    latencies = []
-    errors = 0
-    success = 0
-    anomalies = []
-    
-    lock = threading.Lock()
-    
-    def send_request():
-        nonlocal errors, success
-        start = time.perf_counter()
-        try:
-            r = requests.get(target_url, timeout=2.0)
-            elapsed = (time.perf_counter() - start) * 1000.0 # ms
-            with lock:
-                latencies.append(elapsed)
-                success += 1
-                if elapsed > 500.0:
-                    anomalies.append(f"[!] Anomali: Sunucu yanıt süresi kritik eşiği aştı! ({round(elapsed, 1)} ms)")
-        except requests.exceptions.RequestException as e:
-            with lock:
-                errors += 1
-                anomalies.append(f"[⚠️ HATA]: Sunucu yanıt vermeyi kesti veya zaman aşımı oluştu! ({str(e)[:60]})")
-
-    threads = []
-    max_concurrent = 25
-    
-    start_test = time.perf_counter()
-    for i in range(req_count):
-        t = threading.Thread(target=send_request)
-        threads.append(t)
-        t.start()
-        
-        if len(threads) >= max_concurrent or i == req_count - 1:
-            for active_t in threads:
-                active_t.join()
-            threads = []
-
-    total_test_duration = (time.perf_counter() - start_test) * 1000.0 # ms
-    
-    avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
-    max_latency = max(latencies) if latencies else 0.0
-    min_latency = min(latencies) if latencies else 0.0
-    
-    high_latency_count = sum(1 for l in latencies if l > 300.0)
-    risk_factor = 0.0
-    if req_count > 0:
-        risk_factor = ((errors + high_latency_count) / req_count) * 100.0
-        
-    risk_level = "DÜŞÜK (Sunucu Stabil)"
-    risk_color = "var(--accent-green)"
-    if risk_factor > 60.0 or errors == req_count:
-        risk_level = "ÇOK YÜKSEK (Hizmet Dışı Kalma Riski / DoS Başarılı)"
-        risk_color = "var(--accent-red)"
-    elif risk_factor > 30.0:
-        risk_level = "ORTA (Kaynak Tüketimi / Gecikme Artışı)"
-        risk_color = "#eab308"
-
-    return jsonify({
-        "target": target_url,
-        "total_requests": req_count,
-        "success": success,
-        "errors": errors,
-        "avg_latency": round(avg_latency, 2),
-        "max_latency": round(max_latency, 2),
-        "min_latency": round(min_latency, 2),
-        "total_duration_ms": round(total_test_duration, 2),
-        "anomalies": list(set(anomalies))[:15],
-        "risk_percentage": round(risk_factor, 1),
-        "risk_level": risk_level,
-        "risk_color": risk_color,
-        "latencies": [round(l, 1) for l in latencies[:100]]
-    })
 
 
 if __name__ == "__main__":

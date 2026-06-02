@@ -30,3 +30,5 @@ python-nmap==0.7.1
 pythonping==1.1.4
 texttable
 python-dateutil
+ipinfo==5.6.0
+cachetools==7.1.4

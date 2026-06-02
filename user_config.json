@@ -1,0 +1,16 @@
+{
+    "is_first_open": false,
+    "main_dashboard": false,
+    "ping_icmp": false,
+    "port_scan": false,
+    "osint_leak": false,
+    "sast_code": false,
+    "banner_grab": false,
+    "dos_stress": false,
+    "vt_analysis": false,
+    "session_cookie": false,
+    "password_strength": false,
+    "mac_lookup": false,
+    "hash_generator": false,
+    "cipher_lab": false
+}

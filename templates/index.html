@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Siber Güvenlik İstasyonu</title>
+    <script>
+        window.isFirstOpen = {{ 'true' if is_first_open else 'false' }};
+    </script>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -65,7 +68,7 @@
         <aside class="sidebar glass-panel">
             <div class="brand">
                 <i id="sidebar-dragon-emblem" class="ti ti-dragon brand-icon" style="transition: all 0.5s ease;"></i>
-                <h2>Cyber<br>Sentinel</h2>
+                <h2>Cyber Sentinel</h2>
             </div>
             
             <nav class="nav-menu">
@@ -78,7 +81,7 @@
                 <div class="category-title">Tehdit İstihbaratı (OSINT)</div>
                 <button class="nav-item" data-tab="breach"><i class="ti ti-mail-opened"></i><span>Sızıntı Kontrolü (Email)</span></button>
                 <button class="nav-item" data-tab="vt"><i class="ti ti-link"></i><span>Güvenli Link Analizi</span></button>
-                <button class="nav-item" data-tab="passive-recon"><i class="ti ti-eye"></i><span>Pasif Cihaz Keşfi</span></button>
+
                 
                 <div class="category-title">Sistem & Kod Güvenliği</div>
                 <button class="nav-item" data-tab="sast"><i class="ti ti-code"></i><span>Güvenli Kod Analizi</span></button>
@@ -91,8 +94,10 @@
                 <button class="nav-item" data-tab="cipherlab"><i class="ti ti-flask"></i><span>Kriptografi Laboratuvarı</span></button>
             </nav>
             
-            <div class="sidebar-footer">
-                <p>&copy; 2026<br><small>Tüm Hakları Saklıdır</small></p>
+            <div class="sidebar-footer" style="padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; line-height: 1.4; color: var(--text-secondary);">
+                <div style="font-weight: bold; margin-bottom: 0.2rem; color: #fff;">Hazırlayan: Ali İhsan GÜLŞEN</div>
+                <div style="font-style: italic; margin-bottom: 0.5rem;">Emeği Geçen: Ali İhsan GÜLŞEN</div>
+                <p style="font-size: 0.75rem; color: rgba(255,255,255,0.3);">&copy; 2026 Cyber Sentinel | Tüm Hakları Saklıdır</p>
             </div>
         </aside>
 
@@ -102,26 +107,87 @@
                 <h1>Operasyon Kontrol Paneli</h1>
                 <div style="display: flex; gap: 1rem; align-items: center;">
                     <div class="status-badge whoami-badge" id="btn-whoami" title="Uygulama Hakkında">
-                        <i class="ti ti-info-circle"></i> BEN KİMİM?
+                        <i class="ti ti-info-circle"></i> MİSYON & YETENEKLER
                     </div>
-                    <div class="status-badge" id="global-power" style="cursor: pointer; user-select: none;" title="İstasyon Gücünü Kapat/Aç"><span class="pulse"></span> İstasyon Aktif</div>
-
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: stretch; min-width: 165px;">
+                        <div class="status-badge" id="global-power" style="cursor: pointer; user-select: none; width: 100%; justify-content: center;" title="İstasyon Gücünü Kapat/Aç"><span class="pulse"></span> İstasyon Aktif</div>
+                        <button id="btn-kill-switch" style="background: #990000; color: white; border: 1px solid #7f0000; font-weight: bold; cursor: pointer; padding: 0.4rem 1rem; border-radius: 0.75rem; font-size: 0.78rem; display: flex; align-items: center; gap: 0.4rem; transition: all 0.3s ease; font-family: inherit; outline: none; box-shadow: 0 0 10px rgba(153, 0, 0, 0.3); width: 100%; justify-content: center;" title="Acil Durum İzolasyonu">
+                            <i class="ti ti-alert-triangle"></i><span>🚨 ACİL DURUM BUTONU</span>
+                        </button>
+                    </div>
                 </div>
             </header>
 
             <div class="dashboard-content">
+                <!-- Yapılanlar / İstatistik Widget -->
+                <div id="stats-widget" class="glass-panel" style="display: none; position: absolute; top: 0; right: 2rem; width: 240px; padding: 0.85rem 1.1rem; z-index: 99; border: 1px solid rgba(0, 240, 255, 0.25); background: rgba(10, 12, 16, 0.9); border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                    <h4 style="margin: 0 0 0.4rem 0; font-size: 0.8rem; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.4rem;">
+                        <i class="ti ti-chart-bar"></i> Yapılanlar / İstatistik
+                    </h4>
+                    <div style="font-size: 0.78rem; display: flex; flex-direction: column; gap: 0.3rem; color: #fff; font-family: 'Inter', sans-serif;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Denetlenen Hedef:</span>
+                            <strong id="stats-targets" style="color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace;">0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Tespit Edilen Risk:</span>
+                            <strong id="stats-risks" style="color: var(--accent-magenta); font-family: 'JetBrains Mono', monospace;">0</strong>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Tabs Implementation -->
                 <!-- Ping Tab (1) -->
-                <section id="scanner" class="tab-content active"><div class="tool-card glass-panel"><div class="card-header"><h3><i class="ti ti-network"></i> Ağ Keşfi (Ping)</h3><p>IP adresinin ağ üzerinde ayakta olup olmadığını kontrol edin.</p></div><div class="input-group"><input type="text" id="ping-target" placeholder="Örn: 192.168.1.1 veya site.com" class="styled-input"><button id="btn-ping" class="btn-primary"><i class="ti ti-zap"></i> Sonda Gönder</button></div><div class="results-container empty" id="ping-results"></div><button id="btn-ai-ping" class="btn-primary btn-ai-analyze" data-source="ping-results" style="display: none; margin-top: 1rem; background: linear-gradient(90deg, #a855f7, #ec4899); border: none; width: auto;"><i class="ti ti-sparkles"></i> Yapay Zeka ile Analiz Et</button></div></section>
+                <section id="scanner" class="tab-content active">
+                    <div class="tool-card glass-panel">
+                        <div class="card-header">
+                            <div class="card-header-wrapper">
+                                <div class="card-header-left">
+                                    <h3><i class="ti ti-network"></i> Ağ Keşfi (Ping)</h3>
+                                    <p>IP adresinin ağ üzerinde ayakta olup olmadığını kontrol edin.</p>
+                                </div>
+                                <div class="tutorial-help-container">
+                                    <button class="btn-tutorial-help"><i class="ti ti-help"></i></button>
+                                    <div class="tutorial-help-content">
+                                        <h4>🌐 Kılavuz: Ping / ICMP (Ağ Keşfi)</h4>
+                                        <p>• Amacı: Hedef sistemin yerel ağda veya uzak sunucuda aktif (up) olup olmadığını denetler.
+• Entegrasyon: IPinfo kütüphanesiyle asenkron çalışarak hedefin Ülke, Şehir, ISP ve harita koordinatlarını cımbızla çeker.
+• Güvenli Kullanım: Arama çubuğuna ham IP veya alan adı yazarak 'IP SORGULA' butonuna basmanız yeterlidir.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="ping-target" placeholder="Örn: 192.168.1.1 veya site.com" class="styled-input">
+                            <button id="btn-ping" class="btn-primary"><i class="ti ti-search"></i> IP Sorgula</button>
+                        </div>
+                        <div class="results-container empty" id="ping-results"></div>
+                        <button id="btn-ai-ping" class="btn-primary btn-ai-analyze" data-source="ping-results" style="display: none; margin-top: 1rem; background: linear-gradient(90deg, #a855f7, #ec4899); border: none; width: auto;"><i class="ti ti-sparkles"></i> Yapay Zeka ile Analiz Et</button>
+                    </div>
+                </section>
 
                 <!-- Port Tab (2) -->
                 <section id="ports" class="tab-content">
                     <div class="tool-card glass-panel">
                         <div class="card-header">
-                            <h3><i class="ti ti-scan"></i> Kritik Port Tarayıcı</h3>
-                            <p>Hedefteki genel kapıları çok hızlı (&lt;2 sn) tarar.</p>
+                            <div class="card-header-wrapper">
+                                <div class="card-header-left">
+                                    <h3><i class="ti ti-scan"></i> Kritik Port Tarayıcı</h3>
+                                    <p>Hedefteki genel kapıları çok hızlı (&lt;2 sn) tarar.</p>
+                                </div>
+                                <div class="tutorial-help-container">
+                                    <button class="btn-tutorial-help"><i class="ti ti-help"></i></button>
+                                    <div class="tutorial-help-content">
+                                        <h4>🔍 Kılavuz: Port Tarama (Keşif Motoru)</h4>
+                                        <p>• Amacı: Hedef sunucu üzerindeki açık kapıları (Siber Giriş Noktalarını) tespit eder.
+• Teknik Altyapı: Arka planda asenkron soket tarayıcıları çalışır. Sızma testlerinde zafiyet tespiti öncesi en kritik 'Keşif' aşamasıdır.
+• Uyarı: Sistem kilitlenmesini önlemek için işlem bitene kadar terminal ekranından ayrılmayınız.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="input-group">
+
                             <input type="text" id="port-target" placeholder="Hedef IP veya Site" class="styled-input">
                             <button id="btn-portscan" class="btn-primary"><i class="ti ti-search"></i> Tara</button>
                         </div>
@@ -139,15 +205,48 @@
                 </section>
 
                 <!-- Banner Grabber Tab (3) -->
-                <section id="banner" class="tab-content"><div class="tool-card glass-panel"><div class="card-header"><h3><i class="ti ti-server"></i> Derin Port Analizi (Banner Grabber)</h3><p>Portun arkasında hangi fiziksel servis ve versiyonunun çalıştığını test eder (Nmap -sV muadili).</p></div><div class="input-group"><input type="text" id="banner-target" placeholder="Hedef (Örn: google.com)" class="styled-input" style="flex:2;"><input type="number" id="banner-port" placeholder="Port (Örn: 80)" class="styled-input" style="flex:1;"><button id="btn-banner" class="btn-primary"><i class="ti ti-fingerprint"></i> Analiz Et</button></div><div class="results-container empty" id="banner-results"></div><button id="btn-ai-banner" class="btn-primary btn-ai-analyze" data-source="banner-results" style="display: none; margin-top: 1rem; background: linear-gradient(90deg, #a855f7, #ec4899); border: none; width: auto;"><i class="ti ti-sparkles"></i> Yapay Zeka ile Analiz Et</button></div></section>
+                <section id="banner" class="tab-content">
+                    <div class="tool-card glass-panel">
+                        <div class="card-header">
+                            <div class="card-header-wrapper">
+                                <div class="card-header-left">
+                                    <h3><i class="ti ti-server"></i> Derin Port Analizi (Banner Grabber)</h3>
+                                    <p>Portun arkasında hangi fiziksel servis ve versiyonunun çalıştığını test eder (Nmap -sV muadili).</p>
+                                </div>
+                                <div class="tutorial-help-container">
+                                    <button class="btn-tutorial-help"><i class="ti ti-help"></i></button>
+                                    <div class="tutorial-help-content">
+                                        <h4>🎛️ Kılavuz: Derin Port Analizi (Banner)</h4>
+                                        <p>• Amacı: Belirtilen port üzerinde çalışan fiziksel servis tipini ve tam sürüm bilgisini tespit eder.
+• Entegrasyon: Nmap (-sV) mimarisine benzer derin soket okuması yapar.
+• Önemli: Servislerin açık zafiyetlerini (CVE) belirlemede en doğru versiyon bilgisini verir.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="input-group"><input type="text" id="banner-target" placeholder="Hedef (Örn: google.com)" class="styled-input" style="flex:2;"><input type="number" id="banner-port" placeholder="Port (Örn: 80)" class="styled-input" style="flex:1;"><button id="btn-banner" class="btn-primary"><i class="ti ti-fingerprint"></i> Analiz Et</button></div><div class="results-container empty" id="banner-results"></div><button id="btn-ai-banner" class="btn-primary btn-ai-analyze" data-source="banner-results" style="display: none; margin-top: 1rem; background: linear-gradient(90deg, #a855f7, #ec4899); border: none; width: auto;"><i class="ti ti-sparkles"></i> Yapay Zeka ile Analiz Et</button></div></section>
 
                 <!-- DoS Stress Test Tab -->
                 <section id="stress" class="tab-content">
                     <div class="tool-card glass-panel">
                         <div class="card-header">
-                            <h3><i class="ti ti-activity"></i> Web Sunucu Yük & Stres Testi (DoS Analizi)</h3>
-                            <p>Defansif amaçlı yerel web sunucunuzun yük taşıma kapasitesini asenkron HTTP istekleri göndererek test edin. Performans ve gecikme grafiklerini çıkarın.</p>
+                            <div class="card-header-wrapper">
+                                <div class="card-header-left">
+                                    <h3><i class="ti ti-activity"></i> Web Sunucu Yük & Stres Testi (DoS Analizi)</h3>
+                                    <p>Defansif amaçlı yerel web sunucunuzun yük taşıma kapasitesini asenkron HTTP istekleri göndererek test edin. Performans ve gecikme grafiklerini çıkarın.</p>
+                                </div>
+                                <div class="tutorial-help-container">
+                                    <button class="btn-tutorial-help"><i class="ti ti-help"></i></button>
+                                    <div class="tutorial-help-content">
+                                        <h4>⚡ Kılavuz: Web Sunucu Yük & DoS Stres Testi</h4>
+                                        <p>• Amacı: Kendi kontrolünüzdeki sunucuların yüksek trafik altındaki davranışını ve çökme limitlerini ölçer.
+• Çalışma Mantığı: Eş zamanlı asenkron HTTP istekleri göndererek ortalama yanıt süresini ve servis dışı kalma riskini hesaplar.
+• Dikkat: Testleri sadece yetkiniz olan yerel ağ veya test sunucularına uygulayınız.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
                         <div class="input-group">
                             <input type="text" id="stress-target" placeholder="Hedef URL (Örn: http://127.0.0.1:8080)" class="styled-input" style="flex: 2;">
                             <input type="number" id="stress-count" placeholder="İstek Sayısı (1-2000)" class="styled-input" style="flex: 1;" value="200">
@@ -193,8 +292,20 @@
                 <section id="breach" class="tab-content">
                     <div class="tool-card glass-panel">
                         <div class="card-header">
-                            <h3><i class="ti ti-mail-opened"></i> Veri Sızıntısı Kontrolü (Breach Checker)</h3>
-                            <p>E-posta adresinizin daha önce internete sızdırılmış veri tabanlarında (veri sızıntılarında) yer alıp almadığını sorgular (OSINT).</p>
+                            <div class="card-header-wrapper">
+                                <div class="card-header-left">
+                                    <h3><i class="ti ti-mail-opened"></i> Veri Sızıntısı Kontrolü (Breach Checker)</h3>
+                                    <p>E-posta adresinizin daha önce internete sızdırılmış veri tabanlarında (veri sızıntılarında) yer alıp almadığını sorgular (OSINT).</p>
+                                </div>
+                                <div class="tutorial-help-container">
+                                    <button class="btn-tutorial-help"><i class="ti ti-help"></i></button>
+                                    <div class="tutorial-help-content">
+                                        <h4>📬 Kılavuz: Sızıntı Kontrolü (OSINT)</h4>
+                                        <p>• Amacı: Kurumsal e-posta adreslerinin siber yeraltı dünyasında (Dark Web) sızdırılıp sızdırılmadığını denetler.
+• Altyapı: Canlı veri tabanı sorgusu gerçekleştirerek şifre, kullanıcı adı veya kimlik ifşalarını satır satır raporlar.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="input-group">
                             <select id="breach-type" class="styled-input" style="flex: 0.3; min-width: 150px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.1); border-radius: 100vw 0 0 100vw; padding: 0.8rem 1rem; cursor: pointer; font-size: 0.95rem; outline: none;">
@@ -213,9 +324,23 @@
                 <section id="vt" class="tab-content">
                     <div class="tool-card glass-panel">
                         <div class="card-header">
-                            <h3><i class="ti ti-link"></i> Güvenli Link & Dosya Analizi (VirusTotal)</h3>
-                            <p>Şüpheli bir web adresi (URL) veya dosya hash değerini (MD5/SHA256) taratarak güvenlik durumunu raporlar.</p>
+                            <div class="card-header-wrapper">
+                                <div class="card-header-left">
+                                    <h3><i class="ti ti-link"></i> Güvenli Link & Dosya Analizi (VirusTotal)</h3>
+                                    <p>Şüpheli bir web adresi (URL) veya dosya hash değerini (MD5/SHA256) taratarak güvenlik durumunu raporlar.</p>
+                                </div>
+                                <div class="tutorial-help-container">
+                                    <button class="btn-tutorial-help"><i class="ti ti-help"></i></button>
+                                    <div class="tutorial-help-content">
+                                        <h4>🔗 Kılavuz: Güvenli Link & Dosya Analizi</h4>
+                                        <p>• Amacı: Şüpheli URL bağlantılarının veya indirilen dosyaların siber tehdit ve zararlı yazılım durumunu denetler.
+• Çalışma Mantığı: Resmi VirusTotal API'sini sorgulayarak 70+ antivirüs motorunun analiz raporunu bir araya getirir.
+• Kullanım: Bağlantıyı (URL) veya dosya imzasını (MD5/SHA256) girerek taratabilirsiniz.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
                         
                         <div class="input-group">
                             <input type="text" id="vt-target" placeholder="URL, Dosya Hash (MD5 / SHA256) veya seçilen yerel dosya yolu..." class="styled-input">
@@ -239,52 +364,25 @@
                     </div>
                 </section>
 
-                <!-- Passive Device Discovery Tab -->
-                <section id="passive-recon" class="tab-content">
-                    <div class="tool-card glass-panel">
-                        <div class="card-header">
-                            <h3><i class="ti ti-eye"></i> Pasif Cihaz Keşfi (Shodan Altyapısı)</h3>
-                            <p>Hedef IP adresine tek bir paket göndermeden Shodan Internet-Wide Scanner veri tabanından açık portları, domainleri ve bilinen zafiyetleri (CVE) sorgular.</p>
-                        </div>
-                        <div class="input-group">
-                            <input type="text" id="passive-recon-target" placeholder="Örn: 8.8.8.8" class="styled-input">
-                            <button id="btn-passive-recon" class="btn-primary"><i class="ti ti-search"></i> Sorgula</button>
-                        </div>
-                        
-                        <div style="margin-top: 1.5rem;">
-                            <label style="font-size: 0.78rem; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; display: block; margin-bottom: 0.4rem;">
-                                <i class="ti ti-terminal-2"></i> Siber İstihbarat Raporu / Konsol
-                            </label>
-                            <textarea id="passive-recon-console" readonly class="styled-input" style="width: 100%; height: 350px; font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; color: #a3e635; background: #000000; border: 1px solid rgba(0, 240, 255, 0.15); border-radius: 1rem; resize: vertical; padding: 1.25rem; line-height: 1.6;" placeholder="Sorgulama başlatıldığında Shodan istihbarat verileri buraya dökülecektir..."></textarea>
-                        </div>
-
-                        <!-- Table showing CVEs and details if found -->
-                        <div id="passive-recon-cve-container" style="display: none; margin-top: 1.5rem;">
-                            <h4 style="font-size: 0.9rem; color: var(--accent-red); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem;"><i class="ti ti-bug"></i> Tespit Edilen Zafiyet Detayları (CVE)</h4>
-                            <div class="cyber-table-container">
-                                <table class="cyber-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Zafiyet Kodu</th>
-                                            <th>Derece / Açıklama</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="passive-recon-cve-table-body">
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div id="passive-recon-export-container" style="margin-top: 1rem;"></div>
-                    </div>
-                </section>
 
                 <!-- Güvenli Kod Analizi Tab (8) -->
                 <section id="sast" class="tab-content">
                     <div class="tool-card glass-panel">
                         <div class="card-header">
-                            <h3><i class="ti ti-code"></i> Statik Güvenli Kod Analizcisi (SAST)</h3>
-                            <p>Yazmış olduğunuz Python kodlarını AST (Soyut Sözdizimi Ağacı) analiz motoru ile tarayarak güvenlik zafiyetlerini (RCE, SQLi, Sabit Kodlanmış Şifreler vb.) raporlar.</p>
+                            <div class="card-header-wrapper">
+                                <div class="card-header-left">
+                                    <h3><i class="ti ti-code"></i> Statik Güvenli Kod Analizcisi (SAST)</h3>
+                                    <p>Yazmış olduğunuz Python kodlarını AST (Soyut Sözdizimi Ağacı) analiz motoru ile tarayarak güvenlik zafiyetlerini (RCE, SQLi, Sabit Kodlanmış Şifreler vb.) raporlar.</p>
+                                </div>
+                                <div class="tutorial-help-container">
+                                    <button class="btn-tutorial-help"><i class="ti ti-help"></i></button>
+                                    <div class="tutorial-help-content">
+                                        <h4>💻 Kılavuz: Güvenli Kod Analizi (SAST)</h4>
+                                        <p>• Amacı: Geliştirilen yazılımların kaynak kodlarındaki siber açıkları (SQL Injection, XSS, RCE) üretim öncesi yakalar.
+• Kullanım: Python kaynak kodunu kutuya yapıştırıp 'KODU ANALİZ ET' butonuyla hızlı tarama gerçekleştirebilirsiniz.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="input-group" style="border-radius: 1rem; flex-direction: column; padding: 1rem; gap: 1rem; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05);">
                             <label style="font-size: 0.85rem; color: var(--accent-cyan); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem;"><i class="ti ti-brand-python"></i> Python Kaynak Kodu Yapıştırın</label>
@@ -304,9 +402,22 @@
                 <section id="session-cookie" class="tab-content">
                     <div class="tool-card glass-panel">
                         <div class="card-header">
-                            <h3><i class="ti ti-cookie"></i> Oturum & Çerez Analizi</h3>
-                            <p>Hedef web sitesinin çerez ve oturum yapılandırmasını (HttpOnly, Secure, SameSite, CSP) siber güvenlik perspektifinden denetler.</p>
+                            <div class="card-header-wrapper">
+                                <div class="card-header-left">
+                                    <h3><i class="ti ti-cookie"></i> Oturum & Çerez Analizi</h3>
+                                    <p>Hedef web sitesinin çerez ve oturum yapılandırmasını (HttpOnly, Secure, SameSite, CSP) siber güvenlik perspektifinden denetler.</p>
+                                </div>
+                                <div class="tutorial-help-container">
+                                    <button class="btn-tutorial-help"><i class="ti ti-help"></i></button>
+                                    <div class="tutorial-help-content">
+                                        <h4>🍪 Kılavuz: Oturum & Çerez Analizi</h4>
+                                        <p>• Amacı: Web sitelerinin çerez (Cookie) politikalarını ve güvenlik bayraklarını (Secure, HttpOnly, SameSite) denetler.
+• Neden Önemli: Eksik bayraklar, oturum çalma (Session Hijacking) ve XSS saldırılarına yol açar.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
                         <div class="input-group">
                             <input type="text" id="session-cookie-target" placeholder="Örn: https://example.com" class="styled-input">
                             <button id="btn-session-cookie" class="btn-primary"><i class="ti ti-cookie"></i> ANALİZ ET</button>
@@ -324,8 +435,20 @@
                 <section id="password" class="tab-content">
                     <div class="tool-card glass-panel">
                         <div class="card-header">
-                            <h3><i class="ti ti-key"></i> Şifre Gücü & Entropi Analizcisi</h3>
-                            <p>Parolanızın karakter havuzunu, matematiksel bilgi entropisini (bits), brute-force kırılma süresini ve en yaygın şifreler listesinde yer alıp almadığını kontrol eder.</p>
+                            <div class="card-header-wrapper">
+                                <div class="card-header-left">
+                                    <h3><i class="ti ti-key"></i> Şifre Gücü & Entropi Analizcisi</h3>
+                                    <p>Parolanızın karakter havuzunu, matematiksel bilgi entropisini (bits), brute-force kırılma süresini ve en yaygın şifreler listesinde yer alıp almadığını kontrol eder.</p>
+                                </div>
+                                <div class="tutorial-help-container">
+                                    <button class="btn-tutorial-help"><i class="ti ti-help"></i></button>
+                                    <div class="tutorial-help-content">
+                                        <h4>🔑 Kılavuz: Şifre Güç & Kırılma Analizörü</h4>
+                                        <p>• Amacı: Belirlediğiniz şifrenin siber saldırganlar tarafından ne kadar sürede çözülebileceğini (Entropi analiziyle) hesaplar.
+• Zafiyet Sorgusu: Şifrenin daha önce siber sızıntı veritabanlarında ifşa olup olmadığını K-Anonymity gizlilik algoritmasıyla denetler.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="input-group">
                             <input type="password" id="password-target" placeholder="Gücünü test etmek istediğiniz parolayı girin..." class="styled-input" oninput="this.type = this.type === 'password' ? 'password' : 'text'">
@@ -351,14 +474,51 @@
                 </section>
 
                 <!-- MAC Tab (13) -->
-                <section id="mac" class="tab-content"><div class="tool-card glass-panel"><div class="card-header"><h3><i class="ti ti-cpu"></i> Donanım OUI (MAC) Sorgusu</h3><p>Cihazların fiziksel adresinden arka planda hangi üretici (Apple, Intel vb) olduğunu tespit eder.</p></div><div class="input-group"><input type="text" id="mac-target" placeholder="MAC Adresi (00:11:22:33:44:55)" class="styled-input"><button id="btn-mac" class="btn-primary"><i class="ti ti-building-factory-2"></i> Donanım Bul</button></div><div class="results-container empty" id="mac-results"></div></div></section>
+                <section id="mac" class="tab-content">
+                    <div class="tool-card glass-panel">
+                        <div class="card-header">
+                            <div class="card-header-wrapper">
+                                <div class="card-header-left">
+                                    <h3><i class="ti ti-cpu"></i> Donanım OUI (MAC) Sorgusu</h3>
+                                    <p>Cihazların fiziksel adresinden arka planda hangi üretici (Apple, Intel vb) olduğunu tespit eder.</p>
+                                </div>
+                                <div class="tutorial-help-container">
+                                    <button class="btn-tutorial-help"><i class="ti ti-help"></i></button>
+                                    <div class="tutorial-help-content">
+                                        <h4>⚙️ Kılavuz: MAC Üretici Bul</h4>
+                                        <p>• Amacı: Ağ kartı fiziksel adresinin (MAC) ilk 3 baytını (OUI) inceleyerek donanımı üreten firmayı (Apple, Cisco, Intel) bulur.
+• Kullanım: Çift nokta veya çizgi ile ayrılmış standart MAC adresini sorgulayabilirsiniz.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="mac-target" placeholder="MAC Adresi (00:11:22:33:44:55)" class="styled-input">
+                            <button id="btn-mac" class="btn-primary"><i class="ti ti-building-factory-2"></i> Donanım Bul</button>
+                        </div>
+                        <div class="results-container empty" id="mac-results"></div>
+                    </div>
+                </section>
+
 
                 <!-- Crypto Tab (14) -->
                 <section id="crypto" class="tab-content">
                     <div class="tool-card glass-panel">
                         <div class="card-header">
-                            <h3><i class="ti ti-key"></i> Kripto & Hash İşlemleri</h3>
-                            <p>Verilerinizi tek yönlü güvenli formatlarda (MD5, SHA1) şifreleyin.</p>
+                            <div class="card-header-wrapper">
+                                <div class="card-header-left">
+                                    <h3><i class="ti ti-key"></i> Kripto & Hash İşlemleri</h3>
+                                    <p>Verilerinizi tek yönlü güvenli formatlarda (MD5, SHA1) şifreleyin.</p>
+                                </div>
+                                <div class="tutorial-help-container">
+                                    <button class="btn-tutorial-help"><i class="ti ti-help"></i></button>
+                                    <div class="tutorial-help-content">
+                                        <h4>🔒 Kılavuz: Kriptografik Hash Oluşturucu</h4>
+                                        <p>• Amacı: Herhangi bir düz metin verisinin tek yönlü kriptografik özetini (MD5, SHA-1, SHA-256) hesaplar.
+• Siber Güvenlikteki Yeri: Dosya bütünlüğü doğrulama (checksum) ve şifrelerin veritabanında güvenli saklanmasında kullanılır.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="input-group">
                             <input type="text" id="crypto-target" placeholder="Şifrelenecek Metin..." class="styled-input">
@@ -389,9 +549,22 @@
                 <section id="cipherlab" class="tab-content">
                     <div class="tool-card glass-panel">
                         <div class="card-header">
-                            <h3><i class="ti ti-flask"></i> Kriptografi Laboratuvarı</h3>
-                            <p>Sezar, Vigenère, DES, AES-256 ve RSA algoritmalarını interaktif olarak test edin. Şifreleme ve çözme işlemlerini gerçekleştirin, güvenlik analizini görün.</p>
+                            <div class="card-header-wrapper">
+                                <div class="card-header-left">
+                                    <h3><i class="ti ti-flask"></i> Kriptografi Laboratuvarı</h3>
+                                    <p>Sezar, Vigenère, DES, AES-256 ve RSA algoritmalarını interaktif olarak test edin. Şifreleme ve çözme işlemlerini gerçekleştirin, güvenlik analizini görün.</p>
+                                </div>
+                                <div class="tutorial-help-container">
+                                    <button class="btn-tutorial-help"><i class="ti ti-help"></i></button>
+                                    <div class="tutorial-help-content">
+                                        <h4>🧪 Kılavuz: Kriptografi Laboratuvarı</h4>
+                                        <p>• Amacı: Simetrik (AES, DES) ve Asimetrik (RSA) şifreleme algoritmalarını pratik olarak test etmenizi sağlar.
+• Güvenlik Notu: DES'in zayıf (kırılmış) yapısı ile modern AES ve RSA'nın kırılması imkansız askeri standartları arasındaki farkı gözlemleyebilirsiniz.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
 
                         <!-- Algoritma + Mod Seçimi -->
                         <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem;">

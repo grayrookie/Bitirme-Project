@@ -1,4 +1,36 @@
 document.addEventListener('DOMContentLoaded', () => {
+    sessionStorage.setItem('greeting_bypassed', 'false');
+
+    let tutorialConfig = {
+        main_dashboard: true,
+        ping_icmp: true,
+        port_scan: true,
+        banner_grab: true,
+        dos_stress: true,
+        osint_leak: true,
+        vt_analysis: true,
+        sast_code: true,
+        session_cookie: true,
+        password_strength: true,
+        mac_lookup: true,
+        hash_generator: true,
+        cipher_lab: true
+    };
+
+
+    async function loadTutorialConfig() {
+        try {
+            const res = await fetch('/api/security/tutorial/status');
+            if (res.ok) {
+                tutorialConfig = await res.json();
+            }
+        } catch (e) {
+            console.error("Kılavuz yapılandırması yüklenemedi:", e);
+        }
+    }
+
+    loadTutorialConfig();
+
     
     // --- YASAL UYARI TAAHHÜT MANTIĞI & AI ASİSTAN OTOMATİK AÇILIŞI ---
     const disclaimerModal = document.getElementById('disclaimer-modal');
@@ -18,13 +50,193 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1500);
     }
 
-    if (disclaimerModal && disclaimerCheck && btnAcceptDisclaimer) {
-        if (localStorage.getItem('disclaimer_accepted') === 'true') {
-            disclaimerModal.style.display = 'none';
-            autoOpenChatWidget();
-        } else {
-            disclaimerModal.style.display = 'flex';
+    // Global istatistik sayaçları
+    let stats = {
+        targets: 0,
+        risks: 0
+    };
+    
+    function updateStats(targetsToAdd = 0, risksToAdd = 0) {
+        stats.targets += targetsToAdd;
+        stats.risks += risksToAdd;
+        
+        const targetsEl = document.getElementById('stats-targets');
+        const risksEl = document.getElementById('stats-risks');
+        
+        if (targetsEl) targetsEl.textContent = stats.targets;
+        if (risksEl) risksEl.textContent = stats.risks;
+    }
+
+    function triggerAiGreeting() {
+        // AI greeting disabled to preserve default view states
+    }
+
+    function initTutorial() {
+        if (window.isFirstOpen && tutorialConfig.main_dashboard) {
+            let currentStep = 1;
+            const guideOverlay = document.createElement('div');
+            guideOverlay.id = 'guide-popup-overlay';
+            guideOverlay.className = 'popup-overlay';
+            guideOverlay.style.zIndex = '60000';
+            guideOverlay.style.display = 'flex';
+            
+            const steps = [
+                {
+                    title: "🛡️ Siber Güvenlik İstasyonuna Hoş Geldiniz!",
+                    text: "Sol menüyü kullanarak Ağ Analizi, Tehdit İstihbaratı (OSINT) ve Kod Güvenliği (SAST) modülleri arasında asenkron geçiş yapabilirsiniz."
+                },
+                {
+                    title: "🔍 Dinamik Girdi Parametreleri",
+                    text: "Taramak istediğiniz hedef IP, URL, alan adı veya e-posta adreslerini merkezdeki veri alanlarına ekleyebilirsiniz."
+                },
+                {
+                    title: "📊 Yapılanlar ve İstatistik Paneli",
+                    text: "Sağ üst köşedeki canlı sayaç kartından, o ana kadar yürüttüğünüz analiz sayılarını ve tespit edilen kritik risk durumlarını izleyebilirsiniz."
+                }
+            ];
+            
+            const renderStep = () => {
+                guideOverlay.innerHTML = `
+                    <div class="whoami-popup" style="max-width: 500px; padding: 2rem; border-color: var(--accent-cyan); position: relative; animation: aerodynamicFadeIn 0.3s ease-out;">
+                        <div class="whoami-header">
+                            <h2 class="whoami-title" style="color: var(--accent-cyan); font-size:1.2rem; display: flex; align-items: center; gap: 0.50rem;"><i class="ti ti-help"></i> Rehber Adım ${currentStep} / 3</h2>
+                        </div>
+                        <div style="margin: 1.5rem 0; color: #fff; line-height: 1.6;">
+                            <h3 style="margin-bottom:0.75rem; font-size: 1.1rem; color: #fff;">${steps[currentStep-1].title}</h3>
+                            <p style="color: var(--text-secondary); font-size: 0.95rem;">${steps[currentStep-1].text}</p>
+                        </div>
+                        <div class="whoami-footer" style="display:flex; justify-content: space-between; align-items:center; border-top: 1px solid rgba(255,255,255,0.05); padding-top:1rem; margin-top:1rem;">
+                            <span style="font-size:0.85rem; color:rgba(255,255,255,0.4); font-weight:600;">Adım ${currentStep} / 3</span>
+                            <button id="btn-guide-next" class="btn-primary" style="width:auto; padding: 0.6rem 1.5rem;">
+                                ${currentStep === 3 ? '<i class="ti ti-check"></i> Bitir' : 'İleri <i class="ti ti-chevron-right"></i>'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                guideOverlay.querySelector('#btn-guide-next').addEventListener('click', async () => {
+                    if (currentStep < 3) {
+                        currentStep++;
+                        renderStep();
+                    } else {
+                        guideOverlay.style.display = 'none';
+                        document.body.removeChild(guideOverlay);
+                        window.isFirstOpen = false;
+                        tutorialConfig.main_dashboard = false;
+                        try {
+                            await fetch('/api/security/tutorial/complete', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ module: 'main_dashboard' })
+                            });
+                        } catch (e) {
+                            console.error("Config save error:", e);
+                        }
+                    }
+                });
+            };
+            
+            document.body.appendChild(guideOverlay);
+            renderStep();
         }
+    }
+
+    function tutorial_denetle_ve_calistir(moduleName) {
+        if (tutorialConfig[moduleName]) {
+            let title = "";
+            let text = "";
+            
+            if (moduleName === "main_dashboard") {
+                title = "🛡️ Operasyon Kontrol Paneline Hoş Geldiniz!";
+                text = "Bu istasyon, atak yüzeyi yönetimi için geliştirilmiş hibrit bir siber güvenlik istemcisidir.\n\nSol menüyü kullanarak araçlar arasında güvenle geçiş yapabilirsiniz.";
+            } else if (moduleName === "ping_icmp") {
+                title = "🌐 Kılavuz: Ping / ICMP (Ağ Keşfi)";
+                text = "• Amacı: Hedef sistemin yerel ağda veya uzak sunucuda aktif (up) olup olmadığını denetler.\n• Entegrasyon: IPinfo kütüphanesiyle asenkron çalışarak hedefin Ülke, Şehir, ISP ve harita koordinatlarını cımbızla çeker.\n• Güvenli Kullanım: Arama çubuğuna ham IP veya alan adı yazarak 'IP SORGULA' butonuna basmanız yeterlidir.";
+            } else if (moduleName === "port_scan") {
+                title = "🔍 Kılavuz: Port Tarama (Keşif Motoru)";
+                text = "• Amacı: Hedef sunucu üzerindeki açık kapıları (Siber Giriş Noktalarını) tespit eder.\n• Teknik Altyapı: Arka planda asenkron soket tarayıcıları çalışır. Sızma testlerinde zafiyet tespiti öncesi en kritik 'Keşif' aşamasıdır.\n• Uyarı: Sistem kilitlenmesini önlemek için işlem bitene kadar terminal ekranından ayrılmayınız.";
+            } else if (moduleName === "banner_grab") {
+                title = "🎛️ Kılavuz: Derin Port Analizi (Banner)";
+                text = "• Amacı: Belirtilen port üzerinde çalışan fiziksel servis tipini ve tam sürüm bilgisini tespit eder.\n• Entegrasyon: Nmap (-sV) mimarisine benzer derin soket okuması yapar.\n• Önemli: Servislerin açık zafiyetlerini (CVE) belirlemede en doğru versiyon bilgisini verir.";
+            } else if (moduleName === "dos_stress") {
+                title = "⚡ Kılavuz: Web Sunucu Yük & DoS Stres Testi";
+                text = "• Amacı: Kendi kontrolünüzdeki sunucuların yüksek trafik altındaki davranışını ve çökme limitlerini ölçer.\n• Çalışma Mantığı: Eş zamanlı asenkron HTTP istekleri göndererek ortalama yanıt süresini ve servis dışı kalma riskini hesaplar.\n• Dikkat: Testleri sadece yetkiniz olan yerel ağ veya test sunucularına uygulayınız.";
+            } else if (moduleName === "osint_leak") {
+                title = "📬 Kılavuz: Sızıntı Kontrolü (OSINT)";
+                text = "• Amacı: Kurumsal e-posta adreslerinin siber yeraltı dünyasında (Dark Web) sızdırılıp sızdırılmadığını denetler.\n• Altyapı: Canlı veri tabanı sorgusu gerçekleştirerek şifre, kullanıcı adı veya kimlik ifşalarını satır satır raporlar.";
+            } else if (moduleName === "vt_analysis") {
+                title = "🔗 Kılavuz: Güvenli Link & Dosya Analizi";
+                text = "• Amacı: Şüpheli URL bağlantılarının veya indirilen dosyaların siber tehdit ve zararlı yazılım durumunu denetler.\n• Çalışma Mantığı: Resmi VirusTotal API'sini sorgulayarak 70+ antivirüs motorunun analiz raporunu bir araya getirir.\n• Kullanım: Bağlantıyı (URL) veya dosya imzasını (MD5/SHA256) girerek taratabilirsiniz.";
+            } else if (moduleName === "sast_code") {
+                title = "💻 Kılavuz: Güvenli Kod Analizi (SAST)";
+                text = "• Amacı: Geliştirilen yazılımların kaynak kodlarındaki siber açıkları (SQL Injection, XSS, RCE) üretim öncesi yakalar.\n• Kullanım: Python kaynak kodunu kutuya yapıştırıp 'KODU ANALİZ ET' butonuyla hızlı tarama gerçekleştirebilirsiniz.";
+            } else if (moduleName === "session_cookie") {
+                title = "🍪 Kılavuz: Oturum & Çerez Analizi";
+                text = "• Amacı: Web sitelerinin çerez (Cookie) politikalarını ve güvenlik bayraklarını (Secure, HttpOnly, SameSite) denetler.\n• Neden Önemli: Eksik bayraklar, oturum çalma (Session Hijacking) ve XSS saldırılarına yol açar.";
+            } else if (moduleName === "password_strength") {
+                title = "🔑 Kılavuz: Şifre Güç & Kırılma Analizörü";
+                text = "• Amacı: Belirlediğiniz şifrenin siber saldırganlar tarafından ne kadar sürede çözülebileceğini (Entropi analiziyle) hesaplar.\n• Zafiyet Sorgusu: Şifrenin daha önce siber sızıntı veritabanlarında ifşa olup olmadığını K-Anonymity gizlilik algoritmasıyla denetler.";
+            } else if (moduleName === "mac_lookup") {
+                title = "⚙️ Kılavuz: MAC Üretici Bul";
+                text = "• Amacı: Ağ kartı fiziksel adresinin (MAC) ilk 3 baytını (OUI) inceleyerek donanımı üreten firmayı (Apple, Cisco, Intel) bulur.\n• Kullanım: Çift nokta veya çizgi ile ayrılmış standart MAC adresini sorgulayabilirsiniz.";
+            } else if (moduleName === "hash_generator") {
+                title = "🔒 Kılavuz: Kriptografik Hash Oluşturucu";
+                text = "• Amacı: Herhangi bir düz metin verisinin tek yönlü kriptografik özetini (MD5, SHA-1, SHA-256) hesaplar.\n• Siber Güvenlikteki Yeri: Dosya bütünlüğü doğrulama (checksum) ve şifrelerin veritabanında güvenli saklanmasında kullanılır.";
+            } else if (moduleName === "cipher_lab") {
+                title = "🧪 Kılavuz: Kriptografi Laboratuvarı";
+                text = "• Amacı: Simetrik (AES, DES) ve Asimetrik (RSA) şifreleme algoritmalarını pratik olarak test etmenizi sağlar.\n• Güvenlik Notu: DES'in zayıf (kırılmış) yapısı ile modern AES ve RSA'nın kırılması imkansız askeri standartları arasındaki farkı gözlemleyebilirsiniz.";
+            } else {
+                return;
+            }
+
+            const guideOverlay = document.createElement('div');
+            guideOverlay.id = 'guide-popup-overlay';
+            guideOverlay.className = 'popup-overlay';
+            guideOverlay.style.zIndex = '60000';
+            guideOverlay.style.display = 'flex';
+            
+            guideOverlay.innerHTML = `
+                <div class="whoami-popup" style="max-width: 500px; padding: 2rem; border-color: var(--accent-cyan); position: relative; animation: aerodynamicFadeIn 0.3s ease-out;">
+                    <div class="whoami-header">
+                        <h2 class="whoami-title" style="color: var(--accent-cyan); font-size:1.15rem; display: flex; align-items: center; gap: 0.50rem;"><i class="ti ti-help"></i> Kılavuz</h2>
+                    </div>
+                    <div style="margin: 1.5rem 0; color: #fff; line-height: 1.6;">
+                        <h3 style="margin-bottom:0.75rem; font-size: 1.05rem; color: #fff;">${title}</h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; white-space: pre-wrap;">${text}</p>
+                    </div>
+                    <div class="whoami-footer" style="display:flex; justify-content: flex-end; align-items:center; border-top: 1px solid rgba(255,255,255,0.05); padding-top:1rem; margin-top:1rem;">
+                        <button id="btn-guide-close" class="btn-primary" style="width:auto; padding: 0.6rem 1.5rem;">
+                            <i class="ti ti-check"></i> Anladım
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            guideOverlay.querySelector('#btn-guide-close').addEventListener('click', async () => {
+                guideOverlay.style.display = 'none';
+                document.body.removeChild(guideOverlay);
+                tutorialConfig[moduleName] = false;
+                try {
+                    await fetch('/api/security/tutorial/complete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ module: moduleName })
+                    });
+                } catch (e) {
+                    console.error("Config güncelleme hatası:", e);
+                }
+            });
+            
+            document.body.appendChild(guideOverlay);
+        }
+    }
+
+    if (disclaimerModal && disclaimerCheck && btnAcceptDisclaimer) {
+        // Her sayfa yenilendiğinde (F5) taahhütname tekrar gösterilsin
+        localStorage.removeItem('disclaimer_accepted');
+        disclaimerModal.style.display = 'flex';
+        disclaimerCheck.checked = false;
+        btnAcceptDisclaimer.disabled = true;
 
         disclaimerCheck.addEventListener('change', () => {
             btnAcceptDisclaimer.disabled = !disclaimerCheck.checked;
@@ -36,6 +248,8 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 disclaimerModal.style.display = 'none';
                 autoOpenChatWidget();
+                triggerAiGreeting();
+                setTimeout(initTutorial, 200);
             }, 500);
         });
     }
@@ -139,6 +353,131 @@ document.addEventListener('DOMContentLoaded', () => {
     const navItems = document.querySelectorAll('.nav-item');
     const tabContents = document.querySelectorAll('.tab-content');
 
+    function clearAndResetModuleConsole(tabId) {
+        // Clear AI buttons that might be showing
+        const aiButtons = ['btn-ai-ping', 'btn-ai-port', 'btn-ai-banner', 'btn-ai-stress', 'btn-ai-breach', 'btn-ai-vt', 'btn-ai-sast', 'btn-ai-triage', 'btn-ai-password'];
+        aiButtons.forEach(btnId => {
+            const btn = document.getElementById(btnId);
+            if (btn) btn.style.display = 'none';
+        });
+
+        // Hide special charts or panel elements
+        const portChartCard = document.getElementById('port-chart-card');
+        if (portChartCard) portChartCard.style.display = 'none';
+        const stressStatsPanel = document.getElementById('stress-stats-panel');
+        if (stressStatsPanel) stressStatsPanel.style.display = 'none';
+        const stressChartCard = document.getElementById('stress-chart-card');
+        if (stressChartCard) stressChartCard.style.display = 'none';
+        const passwordStrengthCard = document.getElementById('password-strength-card');
+        if (passwordStrengthCard) passwordStrengthCard.style.display = 'none';
+
+
+        if (tabId === 'scanner') {
+            const pingResults = document.getElementById('ping-results');
+            if (pingResults) {
+                if (sessionStorage.getItem('greeting_bypassed') === 'true') {
+                    pingResults.innerHTML = `
+<div style="background: rgba(0, 0, 0, 0.5); padding: 1.25rem; border-left: 4px solid var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; line-height: 1.6; color: #39ff14; white-space: pre-wrap;">[+] Ağ Keşfi (Ping) Modülü Başlatıldı.
+[+] Analiz gerçekleştirmek için hedef IP girip 'SONDA GÖNDER' butonuna basınız.</div>`;
+                } else {
+                    sessionStorage.setItem('greeting_bypassed', 'true');
+                }
+            }
+        } else {
+            sessionStorage.setItem('greeting_bypassed', 'true');
+        }
+
+        if (tabId === 'ports') {
+            const el = document.getElementById('port-results');
+            if (el) {
+                el.classList.add('empty');
+                el.innerHTML = `<div style="background: rgba(0, 0, 0, 0.5); padding: 1.25rem; border-left: 4px solid var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; line-height: 1.6; color: #39ff14; white-space: pre-wrap;">[+] Kritik Port Tarayıcı Modülü Başlatıldı.
+[+] Tarama gerçekleştirmek için hedef IP veya site adresi girip 'TARA' butonuna basınız.</div>`;
+            }
+        }
+        if (tabId === 'banner') {
+            const el = document.getElementById('banner-results');
+            if (el) {
+                el.classList.add('empty');
+                el.innerHTML = `<div style="background: rgba(0, 0, 0, 0.5); padding: 1.25rem; border-left: 4px solid var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; line-height: 1.6; color: #39ff14; white-space: pre-wrap;">[+] Derin Port Analizi (Banner Grabber) Modülü Başlatıldı.
+[+] Servis tespiti için hedef adresi ve port numarasını girip 'ANALİZ ET' butonuna basınız.</div>`;
+            }
+        }
+        if (tabId === 'stress') {
+            const el = document.getElementById('stress-results');
+            if (el) {
+                el.classList.add('empty');
+                el.innerHTML = `<div style="background: rgba(0, 0, 0, 0.5); padding: 1.25rem; border-left: 4px solid var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; line-height: 1.6; color: #39ff14; white-space: pre-wrap;">[+] Web Sunucu Yük & DoS Stres Testi Modülü Başlatıldı.
+[+] Hedef URL ve istek sayısı belirleyip 'TESTİ BAŞLAT' butonuna basınız.</div>`;
+            }
+        }
+        if (tabId === 'breach') {
+            const el = document.getElementById('breach-results');
+            if (el) {
+                el.classList.add('empty');
+                el.innerHTML = `<div style="background: rgba(0, 0, 0, 0.5); padding: 1.25rem; border-left: 4px solid var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; line-height: 1.6; color: #39ff14; white-space: pre-wrap;">[+] Veri Sızıntısı Kontrolü (Breach Checker) Modülü Başlatıldı.
+[+] Sorgulanacak e-posta veya şüpheli parolayı yazıp 'KONTROL ET' butonuna basınız.</div>`;
+            }
+        }
+        if (tabId === 'vt') {
+            const el = document.getElementById('vt-results');
+            if (el) {
+                el.classList.add('empty');
+                el.innerHTML = `<div style="background: rgba(0, 0, 0, 0.5); padding: 1.25rem; border-left: 4px solid var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; line-height: 1.6; color: #39ff14; white-space: pre-wrap;">[+] Güvenli Link & Dosya Analizi (VirusTotal) Modülü Başlatıldı.
+[+] URL, dosya imza hash'i girin veya yerel dosya seçip 'ANALİZ ET' butonuna basınız.</div>`;
+            }
+        }
+
+        if (tabId === 'sast') {
+            const el = document.getElementById('sast-results');
+            if (el) {
+                el.classList.add('empty');
+                el.innerHTML = `<div style="background: rgba(0, 0, 0, 0.5); padding: 1.25rem; border-left: 4px solid var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; line-height: 1.6; color: #39ff14; white-space: pre-wrap;">[+] Statik Güvenli Kod Analizcisi (SAST) Modülü Başlatıldı.
+[+] Python kaynak kodunu yapıştırıp 'KODU ANALİZ ET' butonuna basınız.</div>`;
+            }
+            const triageEl = document.getElementById('ai-triage-results');
+            if (triageEl) {
+                triageEl.style.display = 'none';
+                triageEl.innerHTML = '';
+            }
+        }
+        if (tabId === 'session-cookie') {
+            const el = document.getElementById('session-cookie-console');
+            if (el) {
+                el.value = `[+] Oturum & Çerez Analizi Modülü Başlatıldı.\n[+] Hedef web sitesi adresini girip 'ANALİZ ET' butonuna basınız.`;
+            }
+        }
+        if (tabId === 'password') {
+            const el = document.getElementById('password-results');
+            if (el) {
+                el.classList.add('empty');
+                el.innerHTML = `<div style="background: rgba(0, 0, 0, 0.5); padding: 1.25rem; border-left: 4px solid var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; line-height: 1.6; color: #39ff14; white-space: pre-wrap;">[+] Şifre Gücü & Entropi Analizcisi Modülü Başlatıldı.
+[+] Test etmek istediğiniz parolayı girip 'ANALİZ ET' butonuna basınız.</div>`;
+            }
+        }
+        if (tabId === 'mac') {
+            const el = document.getElementById('mac-results');
+            if (el) {
+                el.classList.add('empty');
+                el.innerHTML = `<div style="background: rgba(0, 0, 0, 0.5); padding: 1.25rem; border-left: 4px solid var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; line-height: 1.6; color: #39ff14; white-space: pre-wrap;">[+] Donanım OUI (MAC) Sorgusu Modülü Başlatıldı.
+[+] MAC adresi girip 'DONANIM BUL' butonuna basınız.</div>`;
+            }
+        }
+        if (tabId === 'crypto') {
+            const el = document.getElementById('crypto-results');
+            if (el) {
+                el.classList.add('empty');
+                el.innerHTML = `<div style="background: rgba(0, 0, 0, 0.5); padding: 1.25rem; border-left: 4px solid var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; line-height: 1.6; color: #39ff14; white-space: pre-wrap;">[+] Kripto & Hash İşlemleri Modülü Başlatıldı.
+[+] Şifrelenecek metin girip 'KRİPTOLA' butonuna basınız.</div>`;
+            }
+            const el2 = document.getElementById('crack-results');
+            if (el2) {
+                el2.classList.add('empty');
+                el2.innerHTML = '';
+            }
+        }
+    }
+
     navItems.forEach(item => {
         item.addEventListener('click', () => {
             if (typeof isStationActive !== 'undefined' && !isStationActive) {
@@ -148,9 +487,36 @@ document.addEventListener('DOMContentLoaded', () => {
             navItems.forEach(nav => nav.classList.remove('active'));
             tabContents.forEach(tab => tab.classList.remove('active'));
             item.classList.add('active');
-            document.getElementById(item.dataset.tab).classList.add('active');
+            
+            const targetTab = item.dataset.tab;
+            document.getElementById(targetTab).classList.add('active');
+            
+            // Clear and reset console of the active tab
+            clearAndResetModuleConsole(targetTab);
+
+            // Sayfa bazlı tek seferlik kılavuz tetikleme kontrolü
+            const tabToModuleMap = {
+                'scanner': 'ping_icmp',
+                'ports': 'port_scan',
+                'banner': 'banner_grab',
+                'stress': 'dos_stress',
+                'breach': 'osint_leak',
+                'vt': 'vt_analysis',
+                'sast': 'sast_code',
+                'session-cookie': 'session_cookie',
+                'password': 'password_strength',
+                'mac': 'mac_lookup',
+                'crypto': 'hash_generator',
+                'cipherlab': 'cipher_lab'
+            };
+            const mappedModule = tabToModuleMap[targetTab];
+            if (mappedModule) {
+                tutorial_denetle_ve_calistir(mappedModule);
+            }
+
         });
     });
+
 
     // Helper functions
     function setLoading(btnId, loading) {
@@ -321,6 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!targetVal) return;
         
         postApi('/api/scan/ping', {target: targetVal}, 'btn-ping', 'ping-results', (data) => {
+            updateStats(1, data.alive ? 0 : 1);
             if (data.output) {
                 addLog('ping-results', `<div style="background:rgba(0,0,0,0.5); padding:1rem; border-left:4px solid var(--accent-cyan); white-space:pre-wrap; font-family:'JetBrains Mono',monospace; font-size:0.88rem; line-height:1.6; margin-top:0.5rem; color:#e0e0e0;">${data.output}</div>`, 'none', true);
             }
@@ -341,6 +708,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('port-chart-card').style.display = 'none';
         
         postApi('/api/scan/ports', {target: targetVal}, 'btn-portscan', 'port-results', (data) => {
+            updateStats(1, data.open_ports ? data.open_ports.length : 0);
             if (data.open_ports.length === 0) {
                 return addLog('port-results', 'Açık port bulunamadı.', 'info');
             }
@@ -402,6 +770,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>`, 'none', true);
                 }
             } else if (data.is_firewall) {
+                updateStats(1, 1);
                 // Firewall/Timeout → özel uyarı kartı
                 addLog(resId, `[PORT ${data.port}] Bağlantı Analizi Sonucu:`, 'info');
                 addLog(resId, `
@@ -415,6 +784,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>`, 'none', true);
                 document.getElementById('btn-ai-banner').style.display = 'inline-flex';
             } else {
+                updateStats(1, 0);
                 addLog(resId, `[PORT ${data.port}] Hedef Servis Yanıtı:`, 'info');
                 addLog(resId, `<div style="background:rgba(0,0,0,0.5); padding:1rem; border-left:4px solid var(--accent-magenta); white-space:pre-wrap; font-family:'JetBrains Mono',monospace; font-size:0.88rem; line-height:1.6;">${data.banner}</div>`, 'none', true);
                 document.getElementById('btn-ai-banner').style.display = 'inline-flex';
@@ -452,6 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!target) return;
         
         postApi('/api/crypto/crack', {target: target, type: type}, 'btn-crack', 'crack-results', (data) => {
+            updateStats(1, data.cracked ? 1 : 0);
             if(data.cracked) {
                 addLog('crack-results', `BAŞARILI: Kırılan Şifre: <br><strong style="font-size:1.5em; color:var(--accent-cyan); letter-spacing: 2px;">${data.password}</strong>`, 'none', true);
                 addLog('crack-results', `Kullanılan Yöntem: ${data.method}`, 'success');
@@ -499,6 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         postApi('/api/osint/breach', {type: targetType, target: targetVal}, 'btn-breach', 'breach-results', (data) => {
+            updateStats(1, (data.breached && data.breaches) ? data.breaches.length : 0);
             if (data.error) {
                 if (data.output) {
                     addLog('breach-results', `<div style="background:rgba(0,0,0,0.5); padding:1rem; border-left:4px solid var(--accent-red); white-space:pre-wrap; font-family:'JetBrains Mono',monospace; font-size:0.88rem; line-height:1.6; color:#f87171;">${data.output}</div>`, 'none', true);
@@ -660,6 +1032,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!targetVal && !vtSelectedFilePath) return;
         
         postApi('/api/osint/virustotal', {target: targetVal, file_path: vtSelectedFilePath}, 'btn-vt', 'vt-results', (data) => {
+            updateStats(1, (data.positives && data.positives > 0) ? data.positives : 0);
             if (data.error || !data.success) {
                 if (data.output) {
                     addLog('vt-results', `<div style="background:rgba(0,0,0,0.5); padding:1rem; border-left:4px solid var(--accent-red); white-space:pre-wrap; font-family:'JetBrains Mono',monospace; font-size:0.88rem; line-height:1.6; margin-top:0.5rem; margin-bottom:1rem; color:#f87171;">${data.output}</div>`, 'none', true);
@@ -753,140 +1126,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- PASSIVE RECON EVENT HANDLER ---
-    const btnPassiveRecon = document.getElementById('btn-passive-recon');
-    if (btnPassiveRecon) {
-        btnPassiveRecon.addEventListener('click', () => {
-            const targetVal = document.getElementById('passive-recon-target').value.trim();
-            if (!targetVal) return;
-            
-            const consoleEl = document.getElementById('passive-recon-console');
-            const cveTableBody = document.getElementById('passive-recon-cve-table-body');
-            const cveContainer = document.getElementById('passive-recon-cve-container');
-            const exportContainer = document.getElementById('passive-recon-export-container');
-            
-            consoleEl.value = "[*] Pasif Shodan veri havuzu sorgulanıyor, lütfen bekleyin...\n";
-            cveTableBody.innerHTML = '';
-            cveContainer.style.display = 'none';
-            exportContainer.innerHTML = '';
-            
-            setLoading('btn-passive-recon', true);
-            
-            fetch('/api/osint/passive-recon', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ target: targetVal })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.error) {
-                    consoleEl.value += `\n[❌] HATA: ${data.error}\n`;
-                } else {
-                    consoleEl.value = data.output;
-                    consoleEl.scrollTop = consoleEl.scrollHeight;
-                    
-                    if (data.cves && data.cves.length > 0) {
-                        cveContainer.style.display = 'block';
-                        data.cves.forEach(item => {
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
-                                <td style="color: var(--accent-red); font-weight: bold; font-family: 'JetBrains Mono', monospace;"><a href="https://nvd.nist.gov/vuln/detail/${item.cve}" target="_blank" style="color: inherit; text-decoration: none;"><i class="ti ti-link"></i> ${item.cve}</a></td>
-                                <td style="color: var(--text-secondary); white-space: normal;">${item.description}</td>
-                            `;
-                            cveTableBody.appendChild(row);
-                        });
-                    }
-                    
-                    // Add export buttons for recon report
-                    const datasetToExport = [];
-                    if (data.ports) {
-                        data.ports.forEach(p => {
-                            datasetToExport.push({ type: 'Açık Port', detail: `Port ${p}` });
-                        });
-                    }
-                    if (data.cves) {
-                        data.cves.forEach(c => {
-                            datasetToExport.push({ type: 'Zafiyet (CVE)', detail: c.cve });
-                        });
-                    }
-                    if (data.hostnames) {
-                        data.hostnames.forEach(h => {
-                            datasetToExport.push({ type: 'Alan Adı', detail: h });
-                        });
-                    }
-                    if (data.tags) {
-                        data.tags.forEach(t => {
-                            datasetToExport.push({ type: 'Sistem Etiketi', detail: t });
-                        });
-                    }
-                    
-                    if (datasetToExport.length > 0) {
-                        addExportButtons('passive-recon-export-container', datasetToExport, 'pasif_cihaz_kesif_raporu', [
-                            { label: 'İstihbarat Tipi', key: 'type' },
-                            { label: 'Detay', key: 'detail' }
-                        ]);
-                    }
-                }
-            })
-            .catch(err => {
-                consoleEl.value += `\n[❌] BAĞLANTI HATASI: ${err.message}\n`;
-            })
-            .finally(() => {
-                setLoading('btn-passive-recon', false);
-            });
-        });
-    }
 
-    // --- DoS STRES TESTİ EVENT HANDLER ---
-    document.getElementById('btn-stresstest').addEventListener('click', () => {
-        const targetUrl = document.getElementById('stress-target').value.trim();
-        const reqCount = document.getElementById('stress-count').value.trim();
-        
-        if (!targetUrl) return;
-        
-        document.getElementById('stress-stats-panel').style.display = 'none';
-        document.getElementById('stress-chart-card').style.display = 'none';
-        
-        postApi('/api/security/stress-test', {target: targetUrl, count: reqCount}, 'btn-stresstest', 'stress-results', (data) => {
-            if (data.error) {
-                return addLog('stress-results', data.error, 'error');
-            }
-            
-            addLog('stress-results', `<b>[+] STRES TESTİ BAŞARIYLA TAMAMLANDI</b>`, 'success', true);
-            addLog('stress-results', `Hedef URL: ${data.target}`, 'info');
-            addLog('stress-results', `Toplam Gönderilen İstek: ${data.total_requests}`, 'info');
-            addLog('stress-results', `Başarılı Yanıtlar: <span class="status-up">${data.success}</span> | Hatalı Yanıtlar: <span class="status-down">${data.errors}</span>`, 'none', true);
-            addLog('stress-results', `Ortalama Gecikme: ${data.avg_latency} ms (Min: ${data.min_latency} ms | Maks: ${data.max_latency} ms)`, 'info');
-            addLog('stress-results', `Toplam Test Süresi: ${data.total_duration_ms} ms`, 'info');
-            
-            // Eğer anomali varsa logla
-            if (data.anomalies && data.anomalies.length > 0) {
-                addLog('stress-results', `<b>⚠️ Sunucuda Tespit Edilen Kararsızlıklar / Anomaliler:</b>`, 'error', true);
-                data.anomalies.forEach(anomaly => {
-                    addLog('stress-results', `<span class="status-down">${anomaly}</span>`, 'none', true);
-                });
-            } else {
-                addLog('stress-results', `[+] Test süresince sunucu kararlı çalıştı. Herhangi bir anomali tespit edilmedi.`, 'success');
-            }
 
-            // Stats panelini güncelle ve görünür yap
-            document.getElementById('stress-stat-avg').textContent = `${data.avg_latency} ms`;
-            document.getElementById('stress-stat-success-fail').textContent = `${data.success} / ${data.errors}`;
-            document.getElementById('stress-stat-maxmin').textContent = `${data.max_latency} / ${data.min_latency} ms`;
-            
-            const riskEl = document.getElementById('stress-stat-risk');
-            riskEl.textContent = `${data.risk_percentage}% - ${data.risk_level.split(' ')[0]}`;
-            riskEl.style.color = data.risk_color;
-            
-            document.getElementById('stress-stats-panel').style.display = 'block';
-            
-            // Grafiği çiz ve görünür yap
-            document.getElementById('stress-chart-card').style.display = 'flex';
-            drawLatencyBarChart('stress-chart', data.latencies);
-            
-            document.getElementById('btn-ai-stress').style.display = 'inline-flex';
-        });
-    });
 
     // 14. Güvenli Kod Analizi (SAST)
     document.getElementById('btn-sast').addEventListener('click', () => {
@@ -894,6 +1135,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!codeVal.trim()) return;
         
         postApi('/api/security/code-scan', {target: codeVal}, 'btn-sast', 'sast-results', (data) => {
+            const risks = data.issues ? data.issues.length : 0;
+            updateStats(1, risks);
             if (data.issues.length === 0) {
                 addLog('sast-results', `<div style="padding:1.25rem; border-radius:1rem; border: 1px solid var(--accent-green); background:rgba(16,185,129,0.05); color:#fff;"><i class="fa-solid fa-circle-check status-up"></i> <strong>Tebrikler:</strong> Statik kod analizinde herhangi bir güvenlik açığı veya zayıflık tespit edilemedi. Kod kurallara uygun görünüyor.</div>`, 'none', true);
                 return;
@@ -958,6 +1201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!targetVal) return;
         
         postApi('/api/security/password-check', {target: targetVal}, 'btn-password', 'password-results', (data) => {
+            updateStats(1, (data.is_common || data.level < 3) ? 1 : 0);
             const card = document.getElementById('password-strength-card');
             const bar = document.getElementById('password-strength-bar');
             const label = document.getElementById('password-strength-label');
@@ -1031,7 +1275,7 @@ document.addEventListener('DOMContentLoaded', () => {
         warnPopup.style.display = 'none';
     });
     warnPopup.querySelector('#btn-popup-activate').addEventListener('click', () => {
-        warnPopup.style.display = 'none';
+warnPopup.style.display = 'none';
         powerBtn.click(); // tetikle
     });
 
@@ -1039,8 +1283,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const powerBtn = document.getElementById('global-power');
     const dashboard = document.querySelector('.dashboard-content');
     const sidebar = document.querySelector('.sidebar');
-
-
 
     // --- WHO AM I POPUP ---
     const whoAmIPopup = document.createElement('div');
@@ -1050,25 +1292,30 @@ document.addEventListener('DOMContentLoaded', () => {
     whoAmIPopup.innerHTML = `
         <div class="whoami-popup">
             <div class="whoami-header">
-                <h2 class="whoami-title"><i class="ti ti-info-circle"></i> Ben Kimim? / Uygulama Profili</h2>
+                <h2 class="whoami-title"><i class="ti ti-info-circle"></i> Misyon & Yetenekler Özet Paneli</h2>
                 <button id="btn-whoami-close-top" class="btn-primary" style="background: rgba(255,255,255,0.09); color: #fff; box-shadow: none;">Kapat</button>
             </div>
             <div class="whoami-grid">
                 <div class="whoami-card">
-                    <h4>Uygulamanın Konusu</h4>
-                    <p>Bu platform, ağ güvenliği ve siber keşif süreçlerini tek panelde birleştiren interaktif bir operasyon istasyonudur. Ping, port, DNS, WiFi ve web güvenlik testleriyle hızlı analiz sağlar.</p>
+                    <h4>İstasyon Amacı</h4>
+                    <p>Ağ taraması, OSINT tehdit istihbaratı, statik kod güvenliği (SAST) ve yapay zeka analiz desteğini tek bir platformda birleştiren hibrit bir güvenlik analiz merkezidir.</p>
                 </div>
                 <div class="whoami-card">
-                    <h4>Çalışma Prensibi</h4>
-                    <p>Kullanıcıdan alınan hedef bilgileri, arka uç API servisleri üzerinden kontrollü tarama modüllerine yönlendirilir. Sonuçlar eş zamanlı olarak görsel log kartlarında sunulur ve operasyonel karar desteği oluşturur.</p>
+                    <h4>Yetenekler Özeti</h4>
+                    <p style="line-height: 1.6; font-size: 0.88rem;">
+                        • <strong>Ağ Analizi:</strong> Ping, Port Tarama, Nmap Banner Grabber ve DoS Stres Testi.<br>
+                        • <strong>Tehdit İstihbaratı:</strong> E-posta/Şifre Sızıntı Kontrolü ve VirusTotal Analizi.<br>
+                        • <strong>Sistem & Kod Güvenliği:</strong> Statik Kod Analizi (SAST), Yapay Zeka Zafiyet Triyajı (AI Triage), Oturum/Çerez Denetimi ve Şifre Güç Analizi.<br>
+                        • <strong>Kriptografi:</strong> MAC OUI Sorgusu, Hash Oluşturma/Kırma ve Kripto Simülasyon Laboratuvarı.
+                    </p>
                 </div>
                 <div class="whoami-card">
                     <h4>Misyon</h4>
-                    <p>Ağ ve sistem güvenliği farkındalığını artırmak; temel keşif ve analiz adımlarını erişilebilir, anlaşılır ve hızlı hale getirerek teknik kullanıcıya pratik bir kontrol merkezi sunmak.</p>
+                    <p>Siber güvenlik keşif, analiz ve tehdit istihbaratı süreçlerini pratik araçlarla hızlandırmak; akıllı görselleştirme ve yapay zeka yardımıyla defansif güvenlik farkındalığını artırmak.</p>
                 </div>
                 <div class="whoami-card">
                     <h4>Vizyon</h4>
-                    <p>Modern, aero-dinamik ve yenilikçi arayüz yaklaşımıyla; ileri düzey tehdit görünürlüğü, akıllı otomasyon ve gerçek zamanlı güvenlik telemetrisi sağlayan bütünleşik bir siber savunma paneline dönüşmek.</p>
+                    <p>Yapay zeka asistanı ve modern arayüz tasarımıyla; proaktif tehdit tespiti, otomatik çözüm önerileri ve gerçek zamanlı telemetri sunan bütünleşik bir siber savunma paneline dönüşmek.</p>
                 </div>
             </div>
             <div class="whoami-footer">
@@ -1110,31 +1357,54 @@ document.addEventListener('DOMContentLoaded', () => {
     let isStationActive = true;
     let isBooting = false;
 
+    function deactivateStation() {
+        if (!isStationActive) return;
+        isStationActive = false;
+        powerBtn.className = 'status-badge offline';
+        powerBtn.innerHTML = '<i class="ti ti-power"></i> İSTASYON DEVRE DIŞI';
+        
+        // Sadece menü tuşlarını ve içerikleri grileştir, sol üst amblemi hariç tut
+        document.querySelector('.nav-menu').classList.add('app-disabled');
+        
+        // Amblemi Uyku Modu (Buz Mavisi) rengine sok
+        const emblem = document.getElementById('sidebar-dragon-emblem');
+        if (emblem) {
+            emblem.dataset.onlineColor = emblem.style.color || 'var(--accent-cyan)';
+            emblem.dataset.onlineFilter = emblem.style.filter || '';
+            emblem.style.color = '#3b82f6'; // Buz mavisi
+            emblem.style.filter = 'drop-shadow(0 0 15px rgba(59, 130, 246, 0.6))'; // Hafif parlama
+        }
+        
+        // Disable all tabs inside dashboard except overlay
+        Array.from(dashboard.children).forEach(c => {
+            if (c !== overlay) c.classList.add('app-disabled');
+        });
+    }
+
+    function activateStation() {
+        if (isStationActive) return;
+        isStationActive = true;
+        
+        powerBtn.className = 'status-badge';
+        powerBtn.innerHTML = '<span class="pulse"></span> İSTASYON AKTİF';
+        
+        document.querySelector('.nav-menu').classList.remove('app-disabled');
+        
+        // Amblemi orijinal aktif neon rengine geri çevir
+        const emblem = document.getElementById('sidebar-dragon-emblem');
+        if (emblem && emblem.dataset.onlineColor) {
+            emblem.style.color = emblem.dataset.onlineColor;
+            emblem.style.filter = emblem.dataset.onlineFilter;
+        }
+        
+        Array.from(dashboard.children).forEach(c => c.classList.remove('app-disabled'));
+    }
+
     powerBtn.addEventListener('click', () => {
         if (isBooting) return; // Prevent clicking during boot
 
         if (isStationActive) {
-            // Shutdown System
-            isStationActive = false;
-            powerBtn.className = 'status-badge offline';
-            powerBtn.innerHTML = '<i class="ti ti-power"></i> İSTASYON DEVRE DIŞI';
-            
-            // Sadece menü tuşlarını ve içerikleri grileştir, sol üst amblemi hariç tut
-            document.querySelector('.nav-menu').classList.add('app-disabled');
-            
-            // Amblemi Uyku Modu (Buz Mavisi) rengine sok
-            const emblem = document.getElementById('sidebar-dragon-emblem');
-            if (emblem) {
-                emblem.dataset.onlineColor = emblem.style.color || 'var(--accent-cyan)';
-                emblem.dataset.onlineFilter = emblem.style.filter || '';
-                emblem.style.color = '#3b82f6'; // Buz mavisi
-                emblem.style.filter = 'drop-shadow(0 0 15px rgba(59, 130, 246, 0.6))'; // Hafif parlama
-            }
-            
-            // Disable all tabs inside dashboard except overlay
-            Array.from(dashboard.children).forEach(c => {
-                if (c !== overlay) c.classList.add('app-disabled');
-            });
+            deactivateStation();
         } else {
             // Boot Up System
             isBooting = true;
@@ -1153,26 +1423,128 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (timeLeft <= 0) {
                     clearInterval(bootInterval);
                     isBooting = false;
-                    isStationActive = true;
-                    
+                    activateStation();
                     overlay.style.display = 'none';
-                    powerBtn.className = 'status-badge';
-                    powerBtn.innerHTML = '<span class="pulse"></span> İSTASYON AKTİF';
-                    
-                    document.querySelector('.nav-menu').classList.remove('app-disabled');
-                    
-                    // Amblemi orijinal aktif neon rengine geri çevir
-                    const emblem = document.getElementById('sidebar-dragon-emblem');
-                    if (emblem && emblem.dataset.onlineColor) {
-                        emblem.style.color = emblem.dataset.onlineColor;
-                        emblem.style.filter = emblem.dataset.onlineFilter;
-                    }
-                    
-                    Array.from(dashboard.children).forEach(c => c.classList.remove('app-disabled'));
                 }
             }, 1000);
         }
     });
+
+    // --- KILL SWITCH (ACİL DURUM İZOLASYON) MANTIĞI ---
+    const btnKillSwitch = document.getElementById('btn-kill-switch');
+
+    function updateKillSwitchUi(isIsolated) {
+        if (!btnKillSwitch) return;
+        if (isIsolated) {
+            btnKillSwitch.style.background = '#ff3333';
+            btnKillSwitch.style.borderColor = '#cc2222';
+            btnKillSwitch.style.boxShadow = '0 0 20px rgba(255, 51, 51, 0.6)';
+            btnKillSwitch.innerHTML = '<i class="ti ti-alert-triangle"></i><span>💥 SİSTEM İZOLE EDİLDİ</span>';
+        } else {
+            btnKillSwitch.style.background = '#990000';
+            btnKillSwitch.style.borderColor = '#7f0000';
+            btnKillSwitch.style.boxShadow = '0 0 15px rgba(153, 0, 0, 0.4)';
+            btnKillSwitch.innerHTML = '<i class="ti ti-alert-triangle"></i><span>🚨 ACİL DURUM BUTONU</span>';
+        }
+    }
+
+    function showEmergencyPopup(isIsolated) {
+        // Remove existing emergency popup if any
+        const existing = document.getElementById('emergency-popup-overlay');
+        if (existing) existing.remove();
+        
+        const overlay = document.createElement('div');
+        overlay.id = 'emergency-popup-overlay';
+        overlay.className = 'popup-overlay';
+        overlay.style.zIndex = '70000';
+        overlay.style.display = 'flex';
+        
+        if (isIsolated) {
+            // First show "connecting/isolating" loading state
+            overlay.innerHTML = `
+                <div style="background: rgba(15, 15, 20, 0.96); padding: 3rem; border-radius: 1.5rem; text-align: center; border: 1px solid #ff3333; box-shadow: 0 0 40px rgba(255, 51, 51, 0.2); max-width: 480px; width: 90%; animation: aerodynamicFadeIn 0.3s ease-out;">
+                    <span class="loader" style="width: 60px; height: 60px; border-width: 4px; border-top-color: #ff3333; display: inline-block; margin-bottom: 1.5rem;"></span>
+                    <h2 style="color: #fff; margin-bottom: 1rem; font-size: 1.4rem; letter-spacing: 0.05em; font-weight: 800; text-transform: uppercase;">AĞ İZOLE EDİLİYOR</h2>
+                    <p style="color: var(--text-secondary); line-height: 1.6; font-size: 0.95rem;">[🔄] Yerel Ağ Arabirimleri (NIC Interface) pasif ediliyor, lütfen bekleyiniz...</p>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            
+            setTimeout(() => {
+                // Update to final success state
+                overlay.innerHTML = `
+                    <div style="background: rgba(15, 15, 20, 0.96); padding: 3rem; border-radius: 1.5rem; text-align: center; border: 1px solid #ff3333; box-shadow: 0 0 40px rgba(255, 51, 51, 0.35); max-width: 480px; width: 90%; animation: aerodynamicFadeIn 0.3s ease-out;">
+                        <i class="ti ti-shield-lock" style="font-size: 3.8rem; color: #ff3333; margin-bottom: 1.5rem; filter: drop-shadow(0 0 10px #ff3333);"></i>
+                        <h2 style="color: #fff; margin-bottom: 1rem; font-size: 1.5rem; letter-spacing: 0.05em; font-weight: 800; text-transform: uppercase;">🚨 SİBER KARANTİNA AKTİF</h2>
+                        <p style="color: var(--text-secondary); line-height: 1.6; font-size: 0.95rem; margin-bottom: 2rem;">Tüm soket bağları koparıldı. Sunucu güvenli siber karantinaya alındı.</p>
+                        <button id="btn-emergency-popup-close" class="btn-primary" style="background: #ff3333; color: #fff; font-weight: bold; width: 100%; justify-content: center; box-shadow: 0 0 15px rgba(255, 51, 51, 0.3);">Kapat</button>
+                    </div>
+                `;
+                
+                overlay.querySelector('#btn-emergency-popup-close').addEventListener('click', () => {
+                    overlay.style.animation = 'aerodynamicFadeOut 0.3s forwards';
+                    setTimeout(() => overlay.remove(), 300);
+                });
+                
+                // Disable the station after quarantine success
+                deactivateStation();
+            }, 1200);
+        } else {
+            // Immediately show safe mode popup
+            overlay.innerHTML = `
+                <div style="background: rgba(15, 15, 20, 0.96); padding: 3rem; border-radius: 1.5rem; text-align: center; border: 1px solid var(--accent-green); box-shadow: 0 0 40px rgba(16, 185, 129, 0.35); max-width: 480px; width: 90%; animation: aerodynamicFadeIn 0.3s ease-out;">
+                    <i class="ti ti-shield-check" style="font-size: 3.8rem; color: var(--accent-green); margin-bottom: 1.5rem; filter: drop-shadow(0 0 10px var(--accent-green));"></i>
+                    <h2 style="color: #fff; margin-bottom: 1rem; font-size: 1.5rem; letter-spacing: 0.05em; font-weight: 800; text-transform: uppercase;">🟢 GÜVENLİ ÇEVRİMİÇİ MOD</h2>
+                    <p style="color: var(--text-secondary); line-height: 1.6; font-size: 0.95rem; margin-bottom: 2rem;">Tehdit unsurları bertaraf edildi. Ağ arabirimleri yeniden ayağa kaldırıldı. Sistem çevrimiçi.</p>
+                    <button id="btn-emergency-popup-close" class="btn-primary" style="background: var(--accent-green); color: #000; font-weight: bold; width: 100%; justify-content: center; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);">Kapat</button>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            
+            overlay.querySelector('#btn-emergency-popup-close').addEventListener('click', () => {
+                overlay.style.animation = 'aerodynamicFadeOut 0.3s forwards';
+                setTimeout(() => overlay.remove(), 300);
+            });
+            
+            // Re-activate the station immediately
+            activateStation();
+        }
+    }
+
+    if (btnKillSwitch) {
+        btnKillSwitch.addEventListener('click', async () => {
+            const isIsolatedNow = btnKillSwitch.innerHTML.includes('SİSTEM İZOLE EDİLDİ');
+            if (typeof isStationActive !== 'undefined' && !isStationActive && !isIsolatedNow) {
+                const warnPopup = document.getElementById('warn-popup');
+                if (warnPopup) warnPopup.style.display = 'flex';
+                return;
+            }
+            try {
+                const response = await fetch('/api/security/kill-switch', { method: 'POST' });
+                const data = await response.json();
+                const isIsolated = data.is_network_isolated;
+                updateKillSwitchUi(isIsolated);
+                showEmergencyPopup(isIsolated);
+            } catch (err) {
+                console.error("Kill switch toggle error:", err);
+            }
+        });
+        
+        // Initial status check on load
+        async function checkKillSwitchStatus() {
+            try {
+                const response = await fetch('/api/security/kill-switch/status');
+                const data = await response.json();
+                updateKillSwitchUi(data.is_network_isolated);
+                if (data.is_network_isolated) {
+                    deactivateStation();
+                }
+            } catch (err) {
+                console.error("Kill switch status check error:", err);
+            }
+        }
+        checkKillSwitchStatus();
+    }
 
     // --- AI CHAT WIDGET & TRIAGE MANTIĞI ---
     const btnAiBubble = document.getElementById('btn-ai-bubble');
@@ -1536,92 +1908,144 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // OTURUM & ÇEREZ ANALİZİ (CANLI KONSOL VE POLLING)
-    // ─────────────────────────────────────────────────────────────
-    const btnSessionCookie = document.getElementById('btn-session-cookie');
-    const sessionCookieConsole = document.getElementById('session-cookie-console');
-    const sessionCookieTarget = document.getElementById('session-cookie-target');
-    let pollingInterval = null;
+    // --- HONEYPOT (SİBER TUZAK) MODÜLÜ MANTIĞI ---
+    let honeypotPollInterval = null;
+    let lastLogCount = 0;
 
-    if (btnSessionCookie) {
-        btnSessionCookie.addEventListener('click', async () => {
-            const targetUrl = sessionCookieTarget.value.trim();
-            if (!targetUrl) {
-                alert('Lütfen analiz edilecek bir URL girin.');
-                return;
-            }
-
-            // Temizleme ve yükleme durumunu başlatma
-            sessionCookieConsole.value = '';
-            sessionCookieConsole.value += "=========================================================\n";
-            sessionCookieConsole.value += "[*] Oturum & Çerez Güvenliği Analiz Modülü Başlatılıyor...\n";
-            sessionCookieConsole.value += "=========================================================\n";
-            
-            const originalHtml = btnSessionCookie.innerHTML;
-            btnSessionCookie.innerHTML = '<span class="loader" style="width:15px;height:15px;border-width:2px;"></span> BAŞLADI';
-            btnSessionCookie.disabled = true;
-
-            try {
-                const response = await fetch('/api/security/cookie-analyze', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ target: targetUrl })
-                });
-                const data = await response.json();
-
-                if (data.error) {
-                    sessionCookieConsole.value += `[Hata]: ${data.error}\n`;
-                    btnSessionCookie.innerHTML = originalHtml;
-                    btnSessionCookie.disabled = false;
-                    return;
+    function showAttackerAlertPopup(logEntry) {
+        const existing = document.getElementById('attacker-alert-overlay');
+        if (existing) existing.remove();
+        
+        const overlay = document.createElement('div');
+        overlay.id = 'attacker-alert-overlay';
+        overlay.className = 'popup-overlay';
+        overlay.style.zIndex = '80000';
+        overlay.style.display = 'flex';
+        
+        overlay.innerHTML = `
+            <div style="background: rgba(20, 5, 5, 0.98); padding: 3rem; border-radius: 1.5rem; text-align: center; border: 2px solid #ff3333; box-shadow: 0 0 50px rgba(255, 51, 51, 0.5); max-width: 500px; width: 90%; animation: aerodynamicFadeIn 0.25s ease-out; position: relative;">
+                <div style="position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px; border-radius: 1.8rem; border: 1px solid rgba(255,51,51,0.25); pointer-events: none; animation: pulseAttackerGlow 1.5s infinite alternate;"></div>
+                
+                <i class="ti ti-alert-octagon" style="font-size: 4.5rem; color: #ff3333; margin-bottom: 1.5rem; filter: drop-shadow(0 0 15px #ff3333); display: inline-block;"></i>
+                <h2 style="color: #ff3333; margin-bottom: 1rem; font-size: 1.6rem; letter-spacing: 0.05em; font-weight: 900; text-transform: uppercase;">⚠️ SIZMA GİRİŞİMİ ALGILANDI!</h2>
+                
+                <div style="background: rgba(255, 0, 0, 0.05); border: 1px solid rgba(255, 0, 0, 0.25); padding: 1.25rem; border-radius: 1rem; margin-bottom: 2rem;">
+                    <p style="color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; font-weight: bold; margin: 0;">
+                        ${logEntry.replace('[⚠️]', '').trim()}
+                    </p>
+                </div>
+                
+                <p style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.5; margin-bottom: 2rem;">
+                    [TUZAK TETİKLENDİ] Saldırgan makine sahte servis bağlantısı üzerinden karantinaya alınmıştır.
+                </p>
+                
+                <button id="btn-attacker-alert-close" class="btn-primary" style="background: #ff3333; color: #fff; font-weight: bold; width: 100%; justify-content: center; box-shadow: 0 0 15px rgba(255, 51, 51, 0.3);">Alarmı Sustur</button>
+            </div>
+        `;
+        
+        if (!document.getElementById('pulse-attacker-glow-style')) {
+            const style = document.createElement('style');
+            style.id = 'pulse-attacker-glow-style';
+            style.innerHTML = `
+                @keyframes pulseAttackerGlow {
+                    from { transform: scale(1); opacity: 0.3; }
+                    to { transform: scale(1.02); opacity: 0.8; }
                 }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(overlay);
+        
+        overlay.querySelector('#btn-attacker-alert-close').addEventListener('click', () => {
+            overlay.style.animation = 'aerodynamicFadeOut 0.25s forwards';
+            setTimeout(() => overlay.remove(), 250);
+        });
+    }
 
-                const analysisId = data.analysis_id;
-                let lastLogIndex = 0;
-
-                // Her 450ms'de bir logları çek
-                pollingInterval = setInterval(async () => {
-                    try {
-                        const logResponse = await fetch(`/api/security/cookie-analyze/logs/${analysisId}`);
-                        const logData = await logResponse.json();
-
-                        if (logData.error) {
-                            sessionCookieConsole.value += `[Hata]: Loglar alınamadı: ${logData.error}\n`;
-                            clearInterval(pollingInterval);
-                            btnSessionCookie.innerHTML = originalHtml;
-                            btnSessionCookie.disabled = false;
-                            return;
+    function startHoneypotPolling() {
+        if (honeypotPollInterval) clearInterval(honeypotPollInterval);
+        honeypotPollInterval = setInterval(async () => {
+            try {
+                const response = await fetch('/api/honeypot/logs');
+                const data = await response.json();
+                
+                const consoleEl = document.getElementById('honeypot-console');
+                if (consoleEl) {
+                    consoleEl.value = data.logs.join('\n');
+                    consoleEl.scrollTop = consoleEl.scrollHeight;
+                }
+                
+                if (data.logs.length > lastLogCount) {
+                    for (let i = lastLogCount; i < data.logs.length; i++) {
+                        const log = data.logs[i];
+                        if (log.includes('[⚠️] Saldırgan Tespit Edildi!')) {
+                            showAttackerAlertPopup(log);
+                            appendChatMessage('System', `🚨 **TEHLİKE:** Yeni bir sızma girişimi algılandı!\n${log.replace('[⚠️]', '').trim()}`, 'system');
                         }
-
-                        const logs = logData.logs || [];
-                        // Sadece yeni gelen satırları yazdır
-                        if (logs.length > lastLogIndex) {
-                            for (let i = lastLogIndex; i < logs.length; i++) {
-                                sessionCookieConsole.value += logs[i] + '\n';
-                            }
-                            lastLogIndex = logs.length;
-                            // Konsolu en alta kaydır
-                            sessionCookieConsole.scrollTop = sessionCookieConsole.scrollHeight;
-                        }
-
-                        if (logData.done) {
-                            clearInterval(pollingInterval);
-                            btnSessionCookie.innerHTML = originalHtml;
-                            btnSessionCookie.disabled = false;
-                        }
-                    } catch (err) {
-                        sessionCookieConsole.value += `[Hata]: Bağlantı kesildi: ${err.message}\n`;
-                        clearInterval(pollingInterval);
-                        btnSessionCookie.innerHTML = originalHtml;
-                        btnSessionCookie.disabled = false;
                     }
-                }, 450);
+                    lastLogCount = data.logs.length;
+                }
+                
+                const btnToggle = document.getElementById('btn-honeypot-toggle');
+                if (btnToggle) {
+                    if (data.active) {
+                        btnToggle.innerHTML = '<i class="ti ti-square"></i> Siber Tuzak Durdur';
+                        btnToggle.style.background = 'linear-gradient(135deg, var(--accent-magenta), #b91c1c)';
+                    } else {
+                        btnToggle.innerHTML = '<i class="ti ti-play"></i> Siber Tuzak Başlat';
+                        btnToggle.style.background = 'linear-gradient(135deg, var(--accent-blue), #7c3aed)';
+                        clearInterval(honeypotPollInterval);
+                        honeypotPollInterval = null;
+                    }
+                }
+            } catch (err) {
+                console.error("Honeypot polling error:", err);
+            }
+        }, 1500);
+    }
 
-            } catch (error) {
-                sessionCookieConsole.value += `[Hata]: İstek başarısız oldu: ${error.message}\n`;
-                btnSessionCookie.innerHTML = originalHtml;
-                btnSessionCookie.disabled = false;
+    const btnHoneypotToggle = document.getElementById('btn-honeypot-toggle');
+    if (btnHoneypotToggle) {
+        btnHoneypotToggle.addEventListener('click', async () => {
+            const isRunning = btnHoneypotToggle.innerHTML.includes('Siber Tuzak Durdur');
+            const port = document.getElementById('honeypot-port').value || 8080;
+            
+            try {
+                if (isRunning) {
+                    const response = await fetch('/api/honeypot/stop', { method: 'POST' });
+                    const data = await response.json();
+                    btnHoneypotToggle.innerHTML = '<i class="ti ti-play"></i> Siber Tuzak Başlat';
+                    btnHoneypotToggle.style.background = 'linear-gradient(135deg, var(--accent-blue), #7c3aed)';
+                    if (honeypotPollInterval) {
+                        clearInterval(honeypotPollInterval);
+                        honeypotPollInterval = null;
+                    }
+                    const consoleEl = document.getElementById('honeypot-console');
+                    if (consoleEl) {
+                        consoleEl.value += '\n[🟢] Honeypot kapatıldı.';
+                        consoleEl.scrollTop = consoleEl.scrollHeight;
+                    }
+                } else {
+                    const response = await fetch('/api/honeypot/start', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ port: parseInt(port) })
+                    });
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        alert("HATA: " + data.error);
+                        return;
+                    }
+                    
+                    btnHoneypotToggle.innerHTML = '<i class="ti ti-square"></i> Siber Tuzak Durdur';
+                    btnHoneypotToggle.style.background = 'linear-gradient(135deg, var(--accent-magenta), #b91c1c)';
+                    lastLogCount = 0;
+                    startHoneypotPolling();
+                }
+            } catch (err) {
+                console.error("Honeypot toggle error:", err);
             }
         });
     }
