@@ -48,10 +48,11 @@ def get_kill_switch_status():
 
 
 # API Keys Configuration (Yönetici buraya kendi anahtarlarını yazabilir veya .env dosyasını kullanabilir)
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-VIRUSTOTAL_API_KEY = os.environ.get("VIRUSTOTAL_API_KEY", "")
-HIBP_API_KEY = os.environ.get("HIBP_API_KEY", "")
-IPINFO_TOKEN = os.environ.get("IPINFO_TOKEN", "123456789abc")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY", "")
+HIBP_API_KEY = os.getenv("HIBP_API_KEY", "")
+# Hem IPINFO_ACCESS_TOKEN hem de IPINFO_TOKEN desteklenir
+IPINFO_TOKEN = os.getenv("IPINFO_ACCESS_TOKEN") or os.getenv("IPINFO_TOKEN") or "123456789abc"
 
 # IPinfo global handler initialization with 24h TTL and 4096 entries cache options
 try:
@@ -893,7 +894,7 @@ def passive_recon_lookup():
     # .env dosyasını her sorguda tazelemek için yeniden yüklüyoruz
     from dotenv import load_dotenv
     load_dotenv(dotenv_path=os.path.join(base_path, ".env"), override=True)
-    shodan_key = os.environ.get("SHODAN_API_KEY", "").strip()
+    shodan_key = (os.getenv("SHODAN_API_KEY") or "").strip()
 
     def internetdb_fallback(ip, lines):
         lines.append("[⚠️] UYARI: Resmi SDK sorgusu başarısız oldu veya API anahtarı geçersiz/eksik.")

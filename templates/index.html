@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=1.1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=1.7">
     <style>
         .category-title {
             color: rgba(255,255,255,0.4);
@@ -94,8 +94,7 @@
                 <button class="nav-item" data-tab="cipherlab"><i class="ti ti-flask"></i><span>Kriptografi Laboratuvarı</span></button>
             </nav>
             
-            <div class="sidebar-footer" style="padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; line-height: 1.4; color: var(--text-secondary);">
-                <div style="font-weight: bold; margin-bottom: 0.5rem; color: #fff;">Hazırlayan: Ali İhsan GÜLŞEN</div>
+            <div class="sidebar-footer" style="padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.82rem; line-height: 1.5; color: var(--text-secondary); text-align: center;">
                 <p style="font-size: 0.75rem; color: rgba(255,255,255,0.3);">&copy; 2026 Cyber Sentinel | Tüm Hakları Saklıdır</p>
             </div>
         </aside>
@@ -105,8 +104,18 @@
             <header class="header">
                 <h1>Operasyon Kontrol Paneli</h1>
                 <div style="display: flex; gap: 1rem; align-items: center;">
-                    <div class="status-badge whoami-badge" id="btn-whoami" title="Uygulama Hakkında">
-                        <i class="ti ti-info-circle"></i> MİSYON & YETENEKLER
+                    <!-- Geliştirici Butonu (Solda, dikeyde iki butona eş değer yükseklikte) -->
+                    <div class="status-badge developer-badge" id="btn-developer" style="display: flex; align-items: center; justify-content: center; min-width: 140px; align-self: stretch; cursor: pointer;" title="Geliştirici Bilgileri">
+                        <i class="ti ti-settings"></i> GELİŞTİRİCİ
+                    </div>
+                    <!-- Diğer İki Buton (Sağda, dikey kolon) -->
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: stretch; min-width: 260px;">
+                        <div class="status-badge whoami-badge" id="btn-whoami" style="width: 100%; justify-content: center;" title="Uygulama Hakkında">
+                            <i class="ti ti-info-circle"></i> PROJE AMACI & YAPILABİLENLER
+                        </div>
+                        <div class="status-badge yapilanlar-badge" id="btn-yapilanlar" style="width: 100%; justify-content: center;" title="Yapılan Çalışmalar Raporu">
+                            <i class="ti ti-checklist"></i> YAPILAN ÇALIŞMALAR
+                        </div>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: stretch; min-width: 165px;">
                         <div class="status-badge" id="global-power" style="cursor: pointer; user-select: none; width: 100%; justify-content: center;" title="İstasyon Gücünü Kapat/Aç"><span class="pulse"></span> İstasyon Aktif</div>
@@ -701,6 +710,6 @@
     </div>
 
     <!-- Scripts -->
-    <script src="{{ url_for('static', filename='script.js') }}?v=1.1"></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=1.7"></script>
 </body>
 </html>

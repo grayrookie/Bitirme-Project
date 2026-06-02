@@ -1292,30 +1292,36 @@ warnPopup.style.display = 'none';
     whoAmIPopup.innerHTML = `
         <div class="whoami-popup">
             <div class="whoami-header">
-                <h2 class="whoami-title"><i class="ti ti-info-circle"></i> Misyon & Yetenekler Özet Paneli</h2>
+                <h2 class="whoami-title"><i class="ti ti-info-circle"></i> Uygulama Amacı ve Yapılabilenler Özet Paneli</h2>
                 <button id="btn-whoami-close-top" class="btn-primary" style="background: rgba(255,255,255,0.09); color: #fff; box-shadow: none;">Kapat</button>
             </div>
             <div class="whoami-grid">
                 <div class="whoami-card">
-                    <h4>İstasyon Amacı</h4>
-                    <p>Ağ taraması, OSINT tehdit istihbaratı, statik kod güvenliği (SAST) ve yapay zeka analiz desteğini tek bir platformda birleştiren hibrit bir güvenlik analiz merkezidir.</p>
+                    <h4>Benim Amacım (Geliştirici Hedefi)</h4>
+                    <p style="font-size: 0.88rem; line-height: 1.6;">Bu proje, akademik bitirme çalışmam kapsamında geliştirilmiş olup; siber güvenlik zafiyet analizlerini, ağ keşif mekanizmalarını ve defansif güvenlik kodlama pratiklerini bütünsel ve modern bir web arayüzünde uygulamalı olarak sunmayı, öğrencilerin ve araştırmacıların güvenlik bilincini pratik deneyimle artırmayı hedefler.</p>
                 </div>
                 <div class="whoami-card">
-                    <h4>Yetenekler Özeti</h4>
-                    <p style="line-height: 1.6; font-size: 0.88rem;">
-                        • <strong>Ağ Analizi:</strong> Ping, Port Tarama, Nmap Banner Grabber ve DoS Stres Testi.<br>
-                        • <strong>Tehdit İstihbaratı:</strong> E-posta/Şifre Sızıntı Kontrolü ve VirusTotal Analizi.<br>
-                        • <strong>Sistem & Kod Güvenliği:</strong> Statik Kod Analizi (SAST), Yapay Zeka Zafiyet Triyajı (AI Triage), Oturum/Çerez Denetimi ve Şifre Güç Analizi.<br>
-                        • <strong>Kriptografi:</strong> MAC OUI Sorgusu, Hash Oluşturma/Kırma ve Kripto Simülasyon Laboratuvarı.
+                    <h4>Uygulamanın Amacı</h4>
+                    <p style="font-size: 0.88rem; line-height: 1.6;">Ağ taraması, OSINT tehdit istihbaratı, statik kod güvenliği (SAST) ve yapay zeka analiz desteğini tek bir platformda birleştiren hibrit bir güvenlik analiz merkezidir. Amaç, siber savunma süreçlerini pratikleştirip tek çatı altında görselleştirmektir.</p>
+                </div>
+                <div class="whoami-card">
+                    <h4>Uygulamanın Yapabildikleri (Ağ ve OSINT)</h4>
+                    <p style="line-height: 1.6; font-size: 0.82rem;">
+                        • <strong>Ping / ICMP Keşfi:</strong> Eş zamanlı ping atar ve IPinfo OSINT motoruyla konum/ISP bilgisi çeker.<br>
+                        • <strong>Port Taraması:</strong> Kritik kapıları 2 saniyenin altında analiz eder.<br>
+                        • <strong>Derin Port (Banner):</strong> Çalışan servis versiyonunu tespit eder.<br>
+                        • <strong>DoS Testi:</strong> Sunucu yük ve stres sınırlarını test eder.<br>
+                        • <strong>Email Sızıntı & VirusTotal:</strong> Dark Web sızıntılarını ve 70+ antivirüs motorunun URL raporunu sorgular.
                     </p>
                 </div>
                 <div class="whoami-card">
-                    <h4>Misyon</h4>
-                    <p>Siber güvenlik keşif, analiz ve tehdit istihbaratı süreçlerini pratik araçlarla hızlandırmak; akıllı görselleştirme ve yapay zeka yardımıyla defansif güvenlik farkındalığını artırmak.</p>
-                </div>
-                <div class="whoami-card">
-                    <h4>Vizyon</h4>
-                    <p>Yapay zeka asistanı ve modern arayüz tasarımıyla; proaktif tehdit tespiti, otomatik çözüm önerileri ve gerçek zamanlı telemetri sunan bütünleşik bir siber savunma paneline dönüşmek.</p>
+                    <h4>Uygulamanın Yapabildikleri (Kod & Kripto)</h4>
+                    <p style="line-height: 1.6; font-size: 0.82rem;">
+                        • <strong>SAST Analizörü:</strong> Python kodlarındaki zafiyetleri analiz eder ve AI ile triyaj raporu sunar.<br>
+                        • <strong>Oturum & Çerez Denetimi:</strong> Cookie güvenlik bayraklarını raporlar.<br>
+                        • <strong>Şifre Güç Analizi:</strong> Entropi analizi ve sızıntı sorgusu yapar.<br>
+                        • <strong>Kripto Modülleri:</strong> MAC OUI tespiti, MD5/SHA256 hash üretimi ve kırılması, AES/DES/RSA şifreleme simülasyonu sunar.
+                    </p>
                 </div>
             </div>
             <div class="whoami-footer">
@@ -1339,6 +1345,188 @@ warnPopup.style.display = 'none';
     });
     whoAmIPopup.querySelector('#btn-whoami-close-top').addEventListener('click', closeWhoAmI);
     whoAmIPopup.querySelector('#btn-whoami-close-bottom').addEventListener('click', closeWhoAmI);
+
+    // --- YAPILANLAR POPUP ---
+    const btnYapilanlar = document.getElementById('btn-yapilanlar');
+    const yapilanlarPopup = document.createElement('div');
+    yapilanlarPopup.id = 'yapilanlar-popup-overlay';
+    yapilanlarPopup.className = 'popup-overlay';
+    yapilanlarPopup.style.display = 'none';
+    yapilanlarPopup.innerHTML = `
+        <div class="whoami-popup" style="border-color: rgba(168, 85, 247, 0.4); background: radial-gradient(circle at top right, rgba(168, 85, 247, 0.12), transparent 45%), linear-gradient(145deg, rgba(8, 10, 18, 0.96), rgba(10, 12, 20, 0.98)); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), 0 0 40px rgba(168, 85, 247, 0.12); width: min(860px, 92vw);">
+            <div class="whoami-header">
+                <h2 class="whoami-title" style="color: #c084fc; font-size:1.25rem; display:flex; align-items:center; gap:0.5rem;"><i class="ti ti-checklist"></i> Projenin Sıfırdan Günümüze Gelişim Süreci</h2>
+                <button id="btn-yapilanlar-close-top" class="btn-primary" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); font-weight: 600; padding: 0.4rem 1rem; border-radius: 0.75rem; box-shadow: none;">Kapat</button>
+            </div>
+            <div style="max-height: 52vh; overflow-y: auto; padding-right: 8px; margin-bottom: 1.5rem; color: var(--text-secondary); line-height: 1.6; font-size: 0.9rem;">
+                
+                <!-- 0. Adım -->
+                <div class="step-bubble-card">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <span style="background: rgba(168, 85, 247, 0.12); color: #c084fc; padding: 0.3rem 0.85rem; border-radius: 100vw; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid rgba(168, 85, 247, 0.25);">
+                            <i class="ti ti-flag"></i> 0. Adım
+                        </span>
+                        <span style="color: rgba(168, 85, 247, 0.6); font-size: 0.8rem; font-weight: 600;">Her Şey Nasıl Başladı?</span>
+                    </div>
+                    <h4 style="color: #fff; font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem;">Projenin İlk Hali (Sıfır Noktası)</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6; margin: 0;">Projeye ilk başladığımda elimde sadece Flask ile yazılmış, birkaç kutucuk ve butondan oluşan çok basit bir taslak vardı. Ne göze hitap eden bir tasarımı bulunuyordu ne de arkada çalışan bir ağ tarama veya tehdit istihbaratı özelliği... Tamamen boş bir sayfaydı diyebilirim.</p>
+                </div>
+
+                <!-- 1. Adım -->
+                <div class="step-bubble-card">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <span style="background: rgba(168, 85, 247, 0.12); color: #c084fc; padding: 0.3rem 0.85rem; border-radius: 100vw; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid rgba(168, 85, 247, 0.25);">
+                            <i class="ti ti-brush"></i> 1. Adım
+                        </span>
+                        <span style="color: rgba(168, 85, 247, 0.6); font-size: 0.8rem; font-weight: 600;">Göze Hitap Eden Modern Bir Görünüm</span>
+                    </div>
+                    <h4 style="color: #fff; font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem;">Tasarım ve Arayüz Revizyonu</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6; margin: 0;">İlk iş olarak projenin arayüzünü günümüz siber güvenlik uygulamalarına yakışacak şekilde baştan tasarladım. Karanlık tema, arkada dönen yumuşak neon renkler ve modern cam paneller ekledim. Ayrıca sol tarafa rahatça gezinebileceğimiz dinamik menüler ve anlık durum kartları koydum.</p>
+                </div>
+
+                <!-- 2. Adım -->
+                <div class="step-bubble-card">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <span style="background: rgba(168, 85, 247, 0.12); color: #c084fc; padding: 0.3rem 0.85rem; border-radius: 100vw; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid rgba(168, 85, 247, 0.25);">
+                            <i class="ti ti-network"></i> 2. Adım
+                        </span>
+                        <span style="color: rgba(168, 85, 247, 0.6); font-size: 0.8rem; font-weight: 600;">Arka Plandaki Motorları Isındırıyoruz</span>
+                    </div>
+                    <h4 style="color: #fff; font-size: 1.05rem; font-weight: 700; margin-bottom: 0.6rem;">Asenkron Ağ Keşif & DoS Motorları</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6; margin: 0;">
+                        Arayüzü toparladıktan sonra işin asıl teknik kısmına geçtim ve arka planda çalışan güçlü araçlar geliştirdim:<br>
+                        • <strong>Ping / ICMP:</strong> IP adreslerinin çalışıp çalışmadığını kontrol eden ping özelliğini ekledim.<br>
+                        • <strong>Hızlı Port Tarama:</strong> Çok hızlı çalışan ve açık kapıları (portları) anında bulabilen çoklu iş parçacıklı (multithreaded) bir tarayıcı yazdım.<br>
+                        • <strong>Derin Port Analizi (Banner):</strong> Portlarda hangi yazılımların ve versiyonların çalıştığını tespit eden bir sistem ekledim.<br>
+                        • <strong>DoS Testi:</strong> Sunucuların yoğun HTTP trafiği altında nasıl tepki verdiğini ve dayanıklılık limitlerini ölçen bir yük test aracı geliştirdim.
+                    </p>
+                </div>
+
+                <!-- 3. Adım -->
+                <div class="step-bubble-card">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <span style="background: rgba(168, 85, 247, 0.12); color: #c084fc; padding: 0.3rem 0.85rem; border-radius: 100vw; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid rgba(168, 85, 247, 0.25);">
+                            <i class="ti ti-search"></i> 3. Adım
+                        </span>
+                        <span style="color: rgba(168, 85, 247, 0.6); font-size: 0.8rem; font-weight: 600;">Dış Dünya ile Entegrasyon</span>
+                    </div>
+                    <h4 style="color: #fff; font-size: 1.05rem; font-weight: 700; margin-bottom: 0.6rem;">Canlı OSINT & Tehdit İstihbaratı</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6; margin: 0;">
+                        Sadece yerel taramalarla sınırlı kalmak istemedim, bu yüzden canlı siber istihbarat kaynaklarını projeme entegre ettim:<br>
+                        • <strong>IPinfo Harita ve ISP Desteği:</strong> Ping attığımız hedefin nerede olduğunu, hangi internet sağlayıcısını kullandığını haritada göstermeye başladık (ve bunu arkada 24 saat önbelleğe alarak hızlandırdım).<br>
+                        • <strong>Sızıntı Kontrolü:</strong> E-posta adreslerinin internete sızıp sızmadığını sorgulayan Dark Web tarayıcısını ekledim.<br>
+                        • <strong>Güvenli Link Analizi:</strong> Şüpheli linkleri 70'ten fazla antivirüs motoruna tek tıkla taratan VirusTotal API entegrasyonunu tamamladım.
+                    </p>
+                </div>
+
+                <!-- 4. Adım -->
+                <div class="step-bubble-card">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <span style="background: rgba(168, 85, 247, 0.12); color: #c084fc; padding: 0.3rem 0.85rem; border-radius: 100vw; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid rgba(168, 85, 247, 0.25);">
+                            <i class="ti ti-code"></i> 4. Adım
+                        </span>
+                        <span style="color: rgba(168, 85, 247, 0.6); font-size: 0.8rem; font-weight: 600;">Güvenlik Analizlerini Derinleştiriyoruz</span>
+                    </div>
+                    <h4 style="color: #fff; font-size: 1.05rem; font-weight: 700; margin-bottom: 0.6rem;">Kod, Oturum ve Kriptografi Güvenliği</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6; margin: 0;">
+                        İstasyonu daha da zenginleştirmek için yeni analiz ve şifreleme modülleri geliştirdim:<br>
+                        • <strong>Kod Analizi (SAST):</strong> Python kodlarındaki açıkları bulup yapay zekayla çözen bir kod tarayıcısı hazırladım.<br>
+                        • <strong>Çerez Analizi:</strong> Sitelerdeki çerez güvenlik bayraklarını (Secure, HttpOnly vb.) inceleyen bir analizör ekledim.<br>
+                        • <strong>Şifre Güç Ölçer:</strong> Şifrelerin ne kadar sürede kırılabileceğini hesaplayan ve internette ifşa olup olmadığını kontrol eden bir sistem kurdum.<br>
+                        • <strong>Kriptografi Laboratuvarı:</strong> Donanım üreticilerini bulma, MD5/SHA256 hash işlemleri ve AES/DES/RSA şifreleme simülatörlerini projeye ekledim.
+                    </p>
+                </div>
+
+                <!-- 5. Adım -->
+                <div class="step-bubble-card" style="margin-bottom: 0;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <span style="background: rgba(168, 85, 247, 0.12); color: #c084fc; padding: 0.3rem 0.85rem; border-radius: 100vw; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid rgba(168, 85, 247, 0.25);">
+                            <i class="ti ti-lock"></i> 5. Adım
+                        </span>
+                        <span style="color: rgba(168, 85, 247, 0.6); font-size: 0.8rem; font-weight: 600;">Son Dokunuşlar ve Koruma</span>
+                    </div>
+                    <h4 style="color: #fff; font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem;">Kılavuz, Taahhütname & Güvenlik Sıkılaştırması</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6; margin: 0;">Proje bitmeye yakınken kullanıcı dostu olmasını istedim. İlk defa girenler için tüm sekmelere özel rehber popupları ve yardım tooltip (?) sistemleri yerleştirdim. Ayrıca API anahtarlarımızın güvenliği için ".env" yapısına geçtim ve tarayıcı önbellek (cache) sıkıntılarını çözmek için dinamik sürüm kontrolü uygulayarak projeyi tamamladım.</p>
+                </div>
+
+            </div>
+            <div class="whoami-footer" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem;">
+                <button id="btn-yapilanlar-close-bottom" class="btn-primary" style="background: linear-gradient(135deg, #a855f7, #6b21a8); box-shadow: 0 0 15px rgba(168, 85, 247, 0.35);"><i class="ti ti-check"></i> Raporu İnceledim</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(yapilanlarPopup);
+
+    function closeYapilanlar() {
+        yapilanlarPopup.style.display = 'none';
+    }
+
+    if (btnYapilanlar) {
+        btnYapilanlar.addEventListener('click', () => {
+            yapilanlarPopup.style.display = 'flex';
+        });
+    }
+    yapilanlarPopup.addEventListener('click', (e) => {
+        if (e.target === yapilanlarPopup) closeYapilanlar();
+    });
+    yapilanlarPopup.querySelector('#btn-yapilanlar-close-top').addEventListener('click', closeYapilanlar);
+    yapilanlarPopup.querySelector('#btn-yapilanlar-close-bottom').addEventListener('click', closeYapilanlar);
+
+    // --- DEVELOPER POPUP ---
+    const btnDeveloper = document.getElementById('btn-developer');
+    const developerPopup = document.createElement('div');
+    developerPopup.id = 'developer-popup-overlay';
+    developerPopup.className = 'popup-overlay';
+    developerPopup.style.display = 'none';
+    developerPopup.innerHTML = `
+        <div class="whoami-popup" style="max-width: 480px; border-color: rgba(16, 185, 129, 0.4); background: radial-gradient(circle at top right, rgba(16, 185, 129, 0.12), transparent 45%), linear-gradient(145deg, rgba(8, 10, 18, 0.96), rgba(10, 12, 20, 0.98)); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), 0 0 40px rgba(16, 185, 129, 0.12); animation: aerodynamicFadeIn 0.3s ease-out;">
+            <div class="whoami-header">
+                <h2 class="whoami-title" style="color: #34d399; font-size:1.25rem; display:flex; align-items:center; gap:0.5rem;"><i class="ti ti-user-code"></i> Geliştirici Bilgileri</h2>
+                <button id="btn-developer-close-top" class="btn-primary" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 600; padding: 0.4rem 1rem; border-radius: 0.75rem; box-shadow: none;">Kapat</button>
+            </div>
+            <div style="background: rgba(16, 185, 129, 0.03); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 1.25rem; padding: 2rem; text-align: center; margin-bottom: 1rem;">
+                <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(16, 185, 129, 0.12); border: 2px solid rgba(16, 185, 129, 0.35); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto;">
+                    <i class="ti ti-user-code" style="font-size: 2.5rem; color: #34d399;"></i>
+                </div>
+                <h3 style="color: #fff; font-size: 1.3rem; font-weight: 800; margin-bottom: 0.5rem;">Ali İhsan GÜLŞEN</h3>
+                <p style="color: #34d399; font-size: 0.9rem; font-weight: 600; margin-bottom: 1.5rem; letter-spacing: 0.05em; text-transform: uppercase;">Cyber Sentinel Geliştiricisi</p>
+                
+                <div style="display: flex; flex-direction: column; gap: 0.85rem; text-align: left; background: rgba(0, 0, 0, 0.2); padding: 1.25rem; border-radius: 1rem; border: 1px solid rgba(255,255,255,0.03);">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <i class="ti ti-id-badge" style="color: #34d399; font-size: 1.2rem;"></i>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;"><strong>Okul No:</strong> 2205314014</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <i class="ti ti-mail" style="color: #34d399; font-size: 1.2rem;"></i>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;"><strong>E-Posta:</strong> <a href="mailto:aligulsen.0619@gmail.com" style="color: var(--accent-cyan); text-decoration: none;">aligulsen.0619@gmail.com</a></span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <i class="ti ti-brand-github" style="color: #34d399; font-size: 1.2rem;"></i>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;"><strong>GitHub:</strong> <a href="https://github.com/grayrookie" target="_blank" style="color: var(--accent-magenta); text-decoration: none; font-weight: 600;">github.com/grayrookie</a></span>
+                    </div>
+                </div>
+            </div>
+            <div class="whoami-footer" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem;">
+                <button id="btn-developer-close-bottom" class="btn-primary" style="background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 0 15px rgba(16, 185, 129, 0.35); width: 100%; justify-content: center;"><i class="ti ti-check"></i> Profili İnceledim</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(developerPopup);
+
+    function closeDeveloper() {
+        developerPopup.style.display = 'none';
+    }
+
+    if (btnDeveloper) {
+        btnDeveloper.addEventListener('click', () => {
+            developerPopup.style.display = 'flex';
+        });
+    }
+    developerPopup.addEventListener('click', (e) => {
+        if (e.target === developerPopup) closeDeveloper();
+    });
+    developerPopup.querySelector('#btn-developer-close-top').addEventListener('click', closeDeveloper);
+    developerPopup.querySelector('#btn-developer-close-bottom').addEventListener('click', closeDeveloper);
 
 
     

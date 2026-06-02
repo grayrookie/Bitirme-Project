@@ -521,10 +521,14 @@ body {
     animation: aerodynamicFadeIn 0.3s ease-out;
 }
 
+
+
 .whoami-badge {
     color: var(--accent-cyan);
     border-color: rgba(0, 240, 255, 0.35);
     background: rgba(0, 240, 255, 0.08);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .whoami-badge:hover {
@@ -845,4 +849,48 @@ body {
     color: var(--text-secondary);
     white-space: pre-wrap;
 }
+
+/* ---- Yapılan Çalışmalar & Gelişim Süreci Yeni Tasarım ---- */
+.yapilanlar-badge {
+    color: #c084fc !important;
+    border-color: rgba(168, 85, 247, 0.35) !important;
+    background: rgba(168, 85, 247, 0.08) !important;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.yapilanlar-badge:hover {
+    background: rgba(168, 85, 247, 0.16) !important;
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.25) !important;
+}
+
+.step-bubble-card {
+    background: rgba(168, 85, 247, 0.02) !important;
+    border: 1px solid rgba(168, 85, 247, 0.12) !important;
+    border-radius: 1.25rem;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+    transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.step-bubble-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(168, 85, 247, 0.35) !important;
+    background: rgba(168, 85, 247, 0.06) !important;
+    box-shadow: 0 10px 25px rgba(168, 85, 247, 0.15);
+}
+
+.developer-badge {
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.35) !important;
+    background: rgba(16, 185, 129, 0.08) !important;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.developer-badge:hover {
+    background: rgba(16, 185, 129, 0.16) !important;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.25) !important;
+}
+
 
