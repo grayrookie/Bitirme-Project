@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=1.1">
     <style>
         .category-title {
             color: rgba(255,255,255,0.4);
@@ -95,8 +95,7 @@
             </nav>
             
             <div class="sidebar-footer" style="padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; line-height: 1.4; color: var(--text-secondary);">
-                <div style="font-weight: bold; margin-bottom: 0.2rem; color: #fff;">Hazırlayan: Ali İhsan GÜLŞEN</div>
-                <div style="font-style: italic; margin-bottom: 0.5rem;">Emeği Geçen: Ali İhsan GÜLŞEN</div>
+                <div style="font-weight: bold; margin-bottom: 0.5rem; color: #fff;">Hazırlayan: Ali İhsan GÜLŞEN</div>
                 <p style="font-size: 0.75rem; color: rgba(255,255,255,0.3);">&copy; 2026 Cyber Sentinel | Tüm Hakları Saklıdır</p>
             </div>
         </aside>
@@ -702,6 +701,6 @@
     </div>
 
     <!-- Scripts -->
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=1.1"></script>
 </body>
 </html>
