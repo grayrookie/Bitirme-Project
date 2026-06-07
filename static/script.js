@@ -796,6 +796,53 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // 4. DoS Stres Testi
+    const btnStressTest = document.getElementById('btn-stresstest');
+    if (btnStressTest) {
+        btnStressTest.addEventListener('click', () => {
+            const targetVal = document.getElementById('stress-target').value.trim();
+            const countVal = document.getElementById('stress-count').value.trim() || "200";
+            if (!targetVal) return;
+
+            // Reset UI states before starting
+            document.getElementById('stress-stats-panel').style.display = 'none';
+            document.getElementById('stress-chart-card').style.display = 'none';
+            const btnAiStress = document.getElementById('btn-ai-stress');
+            if (btnAiStress) btnAiStress.style.display = 'none';
+
+            postApi('/api/scan/stress', { target: targetVal, count: parseInt(countVal) }, 'btn-stresstest', 'stress-results', (data) => {
+                // Populate statistics panel
+                document.getElementById('stress-stat-avg').innerText = `${data.avg_latency} ms`;
+                document.getElementById('stress-stat-success-fail').innerText = `${data.success_count} / ${data.fail_count}`;
+                document.getElementById('stress-stat-maxmin').innerText = `${data.max_latency} / ${data.min_latency} ms`;
+                
+                const riskEl = document.getElementById('stress-stat-risk');
+                if (riskEl) {
+                    riskEl.innerText = data.risk_level;
+                    riskEl.style.color = data.risk_color || 'var(--accent-green)';
+                }
+                
+                // Show statistics panel
+                document.getElementById('stress-stats-panel').style.display = 'block';
+
+                if (data.output) {
+                    addLog('stress-results', `<div style="background:rgba(0,0,0,0.5); padding:1rem; border-left:4px solid var(--accent-magenta); white-space:pre-wrap; font-family:'JetBrains Mono',monospace; font-size:0.88rem; line-height:1.6; margin-top:0.5rem; color:#e0e0e0;">${data.output}</div>`, 'none', true);
+                }
+                
+                // Draw chart if latencies are returned
+                if (data.latencies && data.latencies.length > 0) {
+                    document.getElementById('stress-chart-card').style.display = 'flex';
+                    drawLatencyBarChart('stress-chart', data.latencies);
+                }
+
+                // Show AI analysis button
+                if (btnAiStress) {
+                    btnAiStress.style.display = 'inline-flex';
+                }
+            });
+        });
+    }
+
     // 9. MAC
     document.getElementById('btn-mac').addEventListener('click', () => {
         postApi('/api/scan/mac', {target: document.getElementById('mac-target').value.trim()}, 'btn-mac', 'mac-results', (data) => {

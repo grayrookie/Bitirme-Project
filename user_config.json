@@ -1,7 +1,7 @@
 {
     "is_first_open": true,
     "main_dashboard": false,
-    "ping_icmp": true,
+    "ping_icmp": false,
     "port_scan": false,
     "banner_grab": false,
     "dos_stress": false,

@@ -10,28 +10,15 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
     <!-- Tabler Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=1.7">
-    <style>
-        .category-title {
-            color: rgba(255,255,255,0.4);
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin: 1rem 0 0.5rem 1rem;
-            font-weight: 700;
-        }
-        .nav-menu { gap: 0.5rem; overflow-y: auto; max-height: calc(100vh - 200px); padding-right: 10px; }
-        .nav-menu::-webkit-scrollbar { width: 4px; }
-        .nav-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-        .input-group { flex-wrap: wrap; }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.3">
+
 </head>
 <body>
     <!-- YASAL VE ETİK UYARI TAAHHÜTNAMESİ MODALI -->
@@ -67,7 +54,7 @@
         <!-- Sidebar Navigation -->
         <aside class="sidebar glass-panel">
             <div class="brand">
-                <i id="sidebar-dragon-emblem" class="ti ti-dragon brand-icon" style="transition: all 0.5s ease;"></i>
+                <i id="sidebar-dragon-emblem" class="fa-solid fa-user-shield brand-icon" style="transition: all 0.5s ease;"></i>
                 <h2>Cyber Sentinel</h2>
             </div>
             
@@ -102,7 +89,7 @@
         <!-- Main Content Area -->
         <main class="main-content">
             <header class="header">
-                <h1>Operasyon Kontrol Paneli</h1>
+                <h1>Güvenlik Kontrol Merkezi</h1>
                 <div style="display: flex; gap: 1rem; align-items: center;">
                     <!-- Geliştirici Butonu (Solda, dikeyde iki butona eş değer yükseklikte) -->
                     <div class="status-badge developer-badge" id="btn-developer" style="display: flex; align-items: center; justify-content: center; min-width: 140px; align-self: stretch; cursor: pointer;" title="Geliştirici Bilgileri">
@@ -710,6 +697,6 @@
     </div>
 
     <!-- Scripts -->
-    <script src="{{ url_for('static', filename='script.js') }}?v=1.7"></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=2.3"></script>
 </body>
 </html>
