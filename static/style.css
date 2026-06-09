@@ -557,7 +557,7 @@ body {
     top: 0; left: 0; width: 100vw; height: 100vh;
     background: rgba(5, 5, 10, 0.85);
     backdrop-filter: blur(12px);
-    z-index: 999;
+    z-index: 99999;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -861,6 +861,8 @@ body {
     color: var(--accent-violet) !important;
     border-color: rgba(167, 139, 250, 0.3) !important;
     background: rgba(167, 139, 250, 0.06) !important;
+    cursor: pointer;
+    transition: var(--transition-aero);
 }
 
 .yapilanlar-badge:hover {
@@ -872,12 +874,15 @@ body {
     color: var(--accent-emerald) !important;
     border-color: rgba(16, 185, 129, 0.3) !important;
     background: rgba(16, 185, 129, 0.06) !important;
+    cursor: pointer;
+    transition: var(--transition-aero);
 }
 
 .developer-badge:hover {
     background: rgba(16, 185, 129, 0.12) !important;
     box-shadow: 0 0 15px rgba(16, 185, 129, 0.15) !important;
 }
+
 
 .step-bubble-card {
     background: rgba(167, 139, 250, 0.01) !important;

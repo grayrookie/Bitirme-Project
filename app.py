@@ -825,8 +825,6 @@ def static_code_analyzer(code_content):
             })
             
     return issues
-
-
 @app.route("/api/osint/breach", methods=["POST"])
 def check_email_breach():
     import re

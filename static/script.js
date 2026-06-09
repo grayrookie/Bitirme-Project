@@ -706,7 +706,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!targetVal) return;
         
         document.getElementById('port-chart-card').style.display = 'none';
-        
         postApi('/api/scan/ports', {target: targetVal}, 'btn-portscan', 'port-results', (data) => {
             updateStats(1, data.open_ports ? data.open_ports.length : 0);
             if (data.open_ports.length === 0) {
@@ -902,20 +901,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const btnAiBreach = document.getElementById('btn-ai-breach');
         if (btnAiBreach) btnAiBreach.style.display = 'none';
-        
-        if (targetType === 'email') {
-            const emailRegex = /^[\w\.-]+@[\w\.-]+\.\w+$/;
-            if (!emailRegex.test(targetVal)) {
-                const resultsContainer = document.getElementById('breach-results');
-                if (resultsContainer) {
-                    resultsContainer.innerHTML = '';
-                    resultsContainer.classList.remove('empty');
-                }
-                addLog('breach-results', `<div style="background:rgba(0,0,0,0.5); padding:1rem; border-left:4px solid var(--accent-red); white-space:pre-wrap; font-family:'JetBrains Mono',monospace; font-size:0.88rem; line-height:1.6; color:#f87171;">[-] Hata: Geçerli bir e-posta formatı girmediniz! (Örn: ad@domain.com)</div>`, 'none', true);
-                return;
-            }
-        }
-        
         postApi('/api/osint/breach', {type: targetType, target: targetVal}, 'btn-breach', 'breach-results', (data) => {
             updateStats(1, (data.breached && data.breaches) ? data.breaches.length : 0);
             if (data.error) {
@@ -937,27 +922,30 @@ document.addEventListener('DOMContentLoaded', () => {
             let simBadge = data.simulated ? ' <span style="font-size:0.7em; padding:0.1rem 0.4rem; background:rgba(239,68,68,0.2); border:1px solid var(--accent-red); border-radius:4px; color:var(--accent-red)">SİMÜLE EDİLDİ</span>' : '';
             const titleText = targetType === 'email' ? 'UYARI: Bu E-posta Adresi Sızdırılmış!' : 'UYARI: Bu Parola Sızdırılmış!';
             addLog('breach-results', `<strong class="status-down" style="font-size:1.1rem;"><i class="fa-solid fa-triangle-exclamation"></i> ${titleText}${simBadge}</strong>`, 'none', true);
-            addLog('breach-results', `Aşağıdaki veri tabanı ihlallerinde bu hedefe ait kayıtlar tespit edildi:`, 'info');
+            addLog('breach-results', data.message, 'info');
             
             let tableHtml = `
                 <div class="cyber-table-container">
                     <table class="cyber-table">
                         <thead>
                             <tr>
-                                <th>Sızıntı / Platform</th>
+                                <th>Platform / Veri Kaynağı</th>
                                 <th>Tarih</th>
-                                <th>Sızıntı Detayı</th>
+                                <th>Sızan Veriler</th>
                             </tr>
                         </thead>
                         <tbody>
             `;
             
             data.breaches.forEach(b => {
+                let name = b.Name || b.description || 'Bilinmeyen Kaynak';
+                let date = b.BreachDate || b.date || 'Bilinmiyor';
+                let dataclass = (b.DataClasses && b.DataClasses.join(', ')) || b.leak_details || 'Bilinmiyor';
                 tableHtml += `
                     <tr>
-                        <td style="color: var(--accent-magenta); font-weight:bold;">${b.name}</td>
-                        <td>${b.date}</td>
-                        <td style="color: var(--text-secondary); white-space:normal; max-width:300px; overflow:hidden; text-overflow:ellipsis;">${b.details}</td>
+                        <td><strong>${name}</strong></td>
+                        <td>${date}</td>
+                        <td><span class="status-down">${dataclass}</span></td>
                     </tr>
                 `;
             });
