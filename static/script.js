@@ -686,15 +686,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetVal = document.getElementById('ping-target').value.trim();
         if(!targetVal) return;
         
-        postApi('/api/scan/ping', {target: targetVal}, 'btn-ping', 'ping-results', (data) => {
-            updateStats(1, data.alive ? 0 : 1);
-            if (data.output) {
-                addLog('ping-results', `<div style="background:rgba(0,0,0,0.5); padding:1rem; border-left:4px solid var(--accent-cyan); white-space:pre-wrap; font-family:'JetBrains Mono',monospace; font-size:0.88rem; line-height:1.6; margin-top:0.5rem; color:#e0e0e0;">${data.output}</div>`, 'none', true);
+        postApi('/api/network/ping', {target: targetVal}, 'btn-ping', 'ping-results', (data) => {
+            if (data.status === 'error') {
+                return addLog('ping-results', data.message, 'error');
             }
-            if (data.alive) {
-                addLog('ping-results', `Hedef ${data.target} ayakta (ALIVE).`, 'success');
+            if (data.status === 'warning') {
+                addLog('ping-results', `<div style="padding:1rem; border-radius:0.75rem; border: 1px solid var(--accent-orange); background:rgba(245,158,11,0.05); color:#ffffff;"><i class="fa-solid fa-triangle-exclamation status-warning"></i> ${data.message}</div>`, 'none', true);
+                return;
+            }
+            updateStats(1, data.canli_mi ? 0 : 1);
+            if (data.raw_output) {
+                addLog('ping-results', `<div style="background:rgba(0,0,0,0.5); padding:1rem; border-left:4px solid var(--accent-cyan); white-space:pre-wrap; font-family:'JetBrains Mono',monospace; font-size:0.88rem; line-height:1.6; margin-top:0.5rem; color:#e0e0e0;">${data.raw_output}</div>`, 'none', true);
+            }
+            if (data.canli_mi) {
+                addLog('ping-results', `Hedef ${data.hedef} ayakta (ALIVE). Rapor: ${data.mesaj}`, 'success');
             } else {
-                addLog('ping-results', `Hedef ${data.target} ulaşılamaz (DOWN) veya ICMP paketleri engellendi.`, 'error');
+                addLog('ping-results', `Hedef ${data.hedef} ulaşılamaz (DOWN) veya ICMP paketleri engellendi. Rapor: ${data.mesaj}`, 'error');
             }
             document.getElementById('btn-ai-ping').style.display = 'inline-flex';
         });
@@ -938,9 +945,9 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             
             data.breaches.forEach(b => {
-                let name = b.Name || b.description || 'Bilinmeyen Kaynak';
-                let date = b.BreachDate || b.date || 'Bilinmiyor';
-                let dataclass = (b.DataClasses && b.DataClasses.join(', ')) || b.leak_details || 'Bilinmiyor';
+                let name = b.name || b.Name || b.description || 'Bilinmeyen Kaynak';
+                let date = b.date || b.BreachDate || 'Bilinmiyor';
+                let dataclass = b.details || (b.DataClasses && b.DataClasses.join(', ')) || b.leak_details || 'Bilinmiyor';
                 tableHtml += `
                     <tr>
                         <td><strong>${name}</strong></td>

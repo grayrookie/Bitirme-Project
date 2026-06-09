@@ -226,141 +226,183 @@ def complete_module_tutorial():
         config[module_name] = False
         save_user_config(config)
     return jsonify({"success": True, "config": config})
-
-
-
-@app.route("/api/scan/ping", methods=["POST"])
-def ping_scan():
-    """Pings a target using pythonping inside a thread, returning the collected console logs."""
-    data = request.json
-    target_raw = data.get("target")
-
-    if not target_raw:
-        return jsonify({"error": "Hedef IP belirtilmedi"}), 400
-
-    # Clean the input target
-    target = target_raw.strip()
-    if "://" in target:
-        target = urlparse(target).netloc
-    if "/" in target:
-        target = target.split("/")[0]
-    if ":" in target:
-        target = target.split(":")[0]
-
-    from pythonping import ping
-    import threading
-
-    output_lines = []
-    output_lines.append("[+] pythonping Altyapısı ile ICMP Ağ Analizi Tetiklendi.")
-    output_lines.append(f"[+] Temizlenen Hedef IP/Domain: {target}")
-
-    scan_result = {"alive": False, "error": None}
-    ipinfo_output_lines = []
-
-    def ping_motoru():
-        try:
-            output_lines.append(f"[+] {target} adresine 4 adet ICMP Echo Request paketi gönderiliyor...\n")
-            
-            # count=4: 4 paket gönderir, timeout=2: 2 saniye cevap bekler
-            cevaplar = ping(target, count=4, timeout=2)
-            
-            success_count = 0
-            for veri in cevaplar:
-                if veri.success:
-                    success_count += 1
-                    try:
-                        boyut = len(veri.message.packet.raw) if (veri.message and veri.message.packet) else 32
-                    except:
-                        boyut = 32
-                    output_lines.append(f"[+] Yanıt geldi: Boyut={boyut} byte | Süre={int(veri.time_elapsed * 1000)}ms")
-                else:
-                    output_lines.append("[-] İstek Zaman Aşımına Uğradı (Request Timed Out)!")
-
-            
-            scan_result["alive"] = success_count > 0
-
-            # Tarama sonu genel istatistik raporu
-            output_lines.append(f"\n--- {target} Ping İstatistikleri ---")
-            output_lines.append(f"└── [En Düşük Gecikme]: {int(cevaplar.rtt_min * 1000)} ms")
-            output_lines.append(f"└── [En Yüksek Gecikme]: {int(cevaplar.rtt_max * 1000)} ms")
-            output_lines.append(f"└── [Ortalama Gecikme]: {int(cevaplar.rtt_avg * 1000)} ms")
-            output_lines.append("[+] ICMP Ağ Analizi Başarıyla Tamamlandı.")
-            
-        except Exception as e:
-            output_lines.append(f"\n[❌] HATA: Ping işlemi gerçekleştirilemedi.")
-            output_lines.append(f"[💡] Detay: {e}")
-            output_lines.append("[💡] ÖNEMLİ: Saf ICMP paketleri göndermek Windows'ta ham soket izni gerektirir.")
-            output_lines.append("[💡] ÇÖZÜM: Projenizi (Cursor / Terminal) 'Yönetici Olarak Çalıştır' modunda açtığınızdan emin olun.")
-            scan_result["error"] = str(e)
-
-    def ipinfo_motoru():
-        if not ipinfo_handler:
-            ipinfo_output_lines.append("[-] Hata: IPinfo motoru başlatılamadı.")
-            return
-
-        try:
-            # Token geçersizliği veya limit aşımı durumunda yedek (Fallback) olarak şifresiz handler deniyoruz
-            try:
-                details = ipinfo_handler.getDetails(target)
-            except Exception:
-                # Ücretsiz ve anahtarsız yedek işleyiciye geç
-                fallback_handler = ipinfo.getHandler()
-                details = fallback_handler.getDetails(target)
-
-            # Nesne üzerinden nitelikleri (Attributes) güvenli bir şekilde çekiyoruz
-            ulke_adi = getattr(details, 'country_name', 'Bilinmiyor')
-            sehir = getattr(details, 'city', 'Bilinmiyor')
-            bölge = getattr(details, 'region', 'Bilinmiyor')
-            posta_kodu = getattr(details, 'postal', 'Bilinmiyor')
-            koordinat = getattr(details, 'loc', 'Bilinmiyor')
-            
-            # ASN / Ağ Operatörü Ayrıştırma
-            asn_adi = "Bilinmiyor"
-            if hasattr(details, 'asn') and isinstance(details.asn, dict):
-                asn_adi = details.asn.get('name', 'Bilinmiyor')
-            elif hasattr(details, 'org') and details.org:
-                asn_adi = details.org # Temel planda düz string gelir
-                
-            # Şirket / Altyapı Şirketi Ayrıştırma
-            sirket_adi = "Belirlenemedi (Kurumsal Veri Yok)"
-            if hasattr(details, 'company') and isinstance(details.company, dict):
-                sirket_adi = details.company.get('name', 'Belirlenemedi')
-
-            # --- SİBER OPERASYON KONSOL ÇIKTISI ---
-            # Sınır çizgileri visual simetri için tam 70 karakter uzunluğundadır
-            sinir = "=" * 70
-            ipinfo_output_lines.append(f"\n{sinir}")
-            ipinfo_output_lines.append(f"[🌐 CYBER SENTINEL OSINT]: {target} Tehdit İstihbarat Raporu")
-            ipinfo_output_lines.append(sinir)
-            ipinfo_output_lines.append(f"├── 🗺️ Ülke / Bölge   : {ulke_adi} ({bölge})")
-            ipinfo_output_lines.append(f"├── 🌆 Şehir / Posta   : {sehir} / {posta_kodu}")
-            ipinfo_output_lines.append(f"├── 🏢 Ağ Operatörü(ASN): {asn_adi}")
-            ipinfo_output_lines.append(f"├── 🏬 Altyapı Şirketi : {sirket_adi}")
-            ipinfo_output_lines.append(f"└── 📍 Harita Koordinat: {koordinat}")
-            ipinfo_output_lines.append(f"{sinir}\n")
-
-        except Exception as e:
-            ipinfo_output_lines.append(f"\n[-] IPinfo Coğrafi İstihbarat Hatası: {e}\n")
-
-    # Arayüzün donmasını engelleyen eş zamanlı (Concurrent) Thread yapısı
-    ping_thread = threading.Thread(target=ping_motoru)
-    ipinfo_thread = threading.Thread(target=ipinfo_motoru)
+def tcp_ping_fallback(hedef_girdi):
+    import socket
+    import time
+    import errno
     
-    ping_thread.start()
-    ipinfo_thread.start()
+    try:
+        ip = socket.gethostbyname(hedef_girdi)
+    except socket.gaierror:
+        return {
+            "status": "danger",
+            "hedef": hedef_girdi,
+            "canli_mi": False,
+            "protokol": "TCP Socket Fallback",
+            "mesaj": "Hedef alan adı çözümlenemedi (DNS hatası).",
+            "raw_output": f"ping: unknown host {hedef_girdi}"
+        }
+
+    # Common ports to probe to find an active port
+    probe_ports = [80, 443, 22, 53, 3389, 8080]
+    active_port = None
     
-    ping_thread.join()
-    ipinfo_thread.join()
+    # Quick probe to find an active or responding port
+    for port in probe_ports:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(0.5)
+        res = s.connect_ex((ip, port))
+        s.close()
+        # 0 = success, ECONNREFUSED = port closed but host responded
+        if res == 0 or res == errno.ECONNREFUSED or res == 10061 or res == 111:
+            active_port = port
+            break
+            
+    # Fallback to port 80 if no port responded quickly
+    if active_port is None:
+        active_port = 80
 
-    # Çıktıları birleştirerek istemciye iletiyoruz
-    full_output = "\n".join(output_lines) + "\n" + "\n".join(ipinfo_output_lines)
+    sent = 0
+    received = 0
+    latencies = []
+    output_lines = [
+        "--- Secure TCP/Socket Fallback Ping Engine ---",
+        f"Pinging {hedef_girdi} [{ip}] on port {active_port}..."
+    ]
 
-    return jsonify({
-        "target": target,
-        "alive": scan_result["alive"],
-        "output": full_output,
-        "error": scan_result["error"]
-    })
+    for i in range(3):
+        sent += 1
+        t0 = time.perf_counter()
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(1.5)
+        res = s.connect_ex((ip, active_port))
+        t1 = time.perf_counter()
+        s.close()
+        
+        latency = (t1 - t0) * 1000
+        # Check connection success or connection refused as active check
+        if res == 0 or res == errno.ECONNREFUSED or res == 10061 or res == 111:
+            received += 1
+            latencies.append(latency)
+            output_lines.append(f"Reply from {ip}: port={active_port} time={latency:.2f} ms")
+        else:
+            output_lines.append(f"Request timed out (port={active_port} status={res}).")
+            
+        time.sleep(0.1)
+
+    lost = sent - received
+    loss_percent = (lost / sent) * 100
+
+    output_lines.append("")
+    output_lines.append(f"Ping statistics for {ip}:")
+    output_lines.append(f"    Packets: Sent = {sent}, Received = {received}, Lost = {lost} ({loss_percent:.0f}% loss),")
+
+    if latencies:
+        min_l = min(latencies)
+        max_l = max(latencies)
+        avg_l = sum(latencies) / len(latencies)
+        output_lines.append("Approximate round trip times in milli-seconds:")
+        output_lines.append(f"    Minimum = {min_l:.2f}ms, Maximum = {max_l:.2f}ms, Average = {avg_l:.2f}ms")
+        
+        return {
+            "status": "success",
+            "hedef": hedef_girdi,
+            "canli_mi": True,
+            "protokol": "TCP Socket Fallback",
+            "mesaj": f"Host aktif. Yanıt Süresi: {avg_l:.2f} ms (TCP Fallback)",
+            "raw_output": "\n".join(output_lines)
+        }
+    else:
+        return {
+            "status": "danger",
+            "hedef": hedef_girdi,
+            "canli_mi": False,
+            "protokol": "TCP Socket Fallback",
+            "mesaj": "Hedef host TCP bağlantı isteklerine yanıt vermedi (Host kapalı veya TCP paketleri engellendi).",
+            "raw_output": "\n".join(output_lines)
+        }
+
+
+@app.route('/api/network/ping', methods=['POST'])
+def gercek_canli_ping_motoru():
+    import re
+    veri = request.get_json() or {}
+    hedef_girdi = veri.get('target') # Örn: "8.8.8.8" veya "google.com"
+
+    if not hedef_girdi:
+        return jsonify({"status": "error", "message": "Geçersiz veya boş hedef girdisi!"}), 400
+
+    # Güvenlik Önlemi (OS Command Injection Engelleme): 
+    # Girdiden sadece harf, rakam, nokta ve tireyi kabul et, terminal komutu sızdırılamasın.
+    hedef_girdi = re.sub(r'[^a-zA-Z0-9.-]', '', hedef_girdi)
+    
+    # URL temizliği (http:// veya https:// varsa sadece domaini al)
+    if "://" in hedef_girdi:
+        hedef_girdi = hedef_girdi.split("://")[1].split("/")[0]
+
+    # Sunucunun işletim sistemine göre doğru ping parametresini seçiyoruz
+    # Canlı Linux sunucularda paket sayısı için "-c", Windows için "-n" kullanılır.
+    parametre = "-n" if platform.system().lower() == "windows" else "-c"
+    
+    # Gerçek ICMP komut satırı dizilimi (Örn canlıda: ping -c 3 8.8.8.8)
+    komut = ["ping", parametre, "3", hedef_girdi]
+
+    try:
+        # 🟢 CANLIDA GERÇEK ICMP ÇALIŞTIRAN ADIM:
+        # pythonping kütüphanesi yerine işletim sisteminin yerleşik ICMP yetkisini tetikliyoruz.
+        islem = subprocess.run(
+            komut, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            text=True, 
+            timeout=5
+        )
+
+        # Komut başarıyla çalıştıysa ve çıktı ürettiyse
+        stderr_val = islem.stderr.lower() if islem.stderr else ""
+        stdout_val = islem.stdout.lower() if islem.stdout else ""
+        is_permission_error = ("permission" in stderr_val or "permitted" in stderr_val or 
+                               "socket" in stderr_val or "permission" in stdout_val or 
+                               "permitted" in stdout_val or "socket" in stdout_val)
+        
+        if islem.returncode != 0 and is_permission_error:
+            # Fall back to TCP ping if raw sockets/ping are restricted
+            return jsonify(tcp_ping_fallback(hedef_girdi))
+
+        if islem.returncode == 0:
+            cikti = islem.stdout
+            
+            # Gecikme (RTT) değerini çıktı içinden regex ile ayıklama (Opsiyonel / Arayüz için)
+            ms_bulucu = re.findall(r'(?:time=|süre=)([0-9.]+)\s*(?:ms)?', cikti, re.IGNORECASE)
+            ortalama_ms = ms_bulucu[-1] if ms_bulucu else "Ölçülemedi"
+
+            return jsonify({
+                "status": "success",
+                "hedef": hedef_girdi,
+                "canli_mi": True,
+                "protokol": "Gerçek ICMP (Ping)",
+                "mesaj": f"Host aktif. Yanıt Süresi: {ortalama_ms} ms",
+                "raw_output": cikti # Terminal ekranına doğrudan basılacak ham çıktı
+            })
+        else:
+            # Komut çalıştı ama host kapalıysa (İstek zaman aşımı / Destination Host Unreachable)
+            return jsonify({
+                "status": "danger",
+                "hedef": hedef_girdi,
+                "canli_mi": False,
+                "protokol": "Gerçek ICMP (Ping)",
+                "mesaj": "Hedef host ICMP isteklerine yanıt vermiyor (Host kapalı veya paketler düşüyor).",
+                "raw_output": islem.stderr if islem.stderr else islem.stdout
+            })
+
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            "status": "warning",
+            "message": "⏱️ Zaman Aşımı: ICMP isteği sunucu zaman sınırını aştı."
+        }), 504
+    except Exception as e:
+        print(f"[!] Canlı Ping Hatası (ICMP engellendi, TCP Fallback devreye alınıyor): {str(e)}")
+        return jsonify(tcp_ping_fallback(hedef_girdi))
 
 
 
@@ -825,6 +867,8 @@ def static_code_analyzer(code_content):
             })
             
     return issues
+
+
 @app.route("/api/osint/breach", methods=["POST"])
 def check_email_breach():
     import re

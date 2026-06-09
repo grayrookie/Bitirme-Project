@@ -45,7 +45,7 @@ def test_endpoint(endpoint, payload, method="POST"):
     print("-" * 50)
 
 # 1. Ping Tarama Testi
-test_endpoint("/api/scan/ping", {"target": "127.0.0.1"})
+test_endpoint("/api/network/ping", {"target": "127.0.0.1"})
 
 # 2. Port Tarama Testi
 test_endpoint("/api/scan/ports", {"target": "127.0.0.1"})
