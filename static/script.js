@@ -521,6 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Helper functions
     function setLoading(btnId, loading) {
         const btn = document.getElementById(btnId);
+        if (!btn) return;
         if (loading) {
             btn.dataset.text = btn.innerHTML;
             btn.innerHTML = '<span class="loader"></span> İŞLENİYOR...';
@@ -550,15 +551,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // API Helper
     async function postApi(url, target, btnId, resId, cb) {
-        if(!target) return;
-        clearBox(resId);
-        setLoading(btnId, true);
         try {
+            clearBox(resId);
+            setLoading(btnId, true);
+            if(!target) return;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
             const req = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(target)
+                body: JSON.stringify(target),
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
             const data = await req.json();
             if(data.error) throw new Error(data.error);
             cb(data);
@@ -855,6 +860,60 @@ document.addEventListener('DOMContentLoaded', () => {
             addLog('mac-results', `Üretici Bilgisi: <br><strong style="font-size:1.4em; color:var(--accent-cyan)">${data.vendor}</strong>`, 'none', true);
         });
     });
+
+    // 9.5 Session/Cookie Analysis
+    const btnSessionCookie = document.getElementById('btn-session-cookie');
+    if (btnSessionCookie) {
+        btnSessionCookie.addEventListener('click', async () => {
+            const targetVal = (document.getElementById('session-cookie-target')?.value || '').trim();
+            const consoleEl = document.getElementById('session-cookie-console');
+            if (!targetVal) {
+                if (consoleEl) consoleEl.value = '[!] UYARI: Lütfen analiz edilecek bir web sitesi adresi girin.\nÖrnek: google.com veya https://example.com';
+                return;
+            }
+            if (btnSessionCookie.dataset.loading === 'true') return;
+            btnSessionCookie.dataset.loading = 'true';
+            const origHtml = btnSessionCookie.innerHTML;
+            btnSessionCookie.innerHTML = '<span class="loader"></span> İŞLENİYOR...';
+            btnSessionCookie.disabled = true;
+            if (consoleEl) consoleEl.value = '[*] Bağlanılıyor ve çerezler sorgulanıyor, lütfen bekleyin...';
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000);
+                const resp = await fetch('/api/security/session-cookie', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target: targetVal }),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                const data = await resp.json();
+                if (consoleEl) {
+                    if (data.output) {
+                        consoleEl.value = data.output;
+                    } else if (data.error) {
+                        consoleEl.value = `[HATA]: ${data.error}`;
+                    } else {
+                        consoleEl.value = '[!] Sunucudan beklenmedik yanıt alındı.';
+                    }
+                    consoleEl.scrollTop = 0;
+                }
+            } catch (err) {
+                if (consoleEl) {
+                    if (err.name === 'AbortError') {
+                        consoleEl.value = '[HATA]: İstek zaman aşımına uğradı (30s). Hedef site yanıt vermedi.';
+                    } else {
+                        consoleEl.value = `[HATA]: ${err.message}`;
+                    }
+                }
+            } finally {
+                btnSessionCookie.innerHTML = origHtml;
+                btnSessionCookie.disabled = false;
+                btnSessionCookie.dataset.loading = 'false';
+            }
+        });
+    }
+
 
     // 10. Crypto Hash Creator
     document.getElementById('btn-crypto').addEventListener('click', () => {

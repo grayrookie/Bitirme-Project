@@ -814,30 +814,24 @@ def _load_crypto_wordlist():
         "princess", "football", "soccer", "hockey", "basketball",
         "ninja", "samurai", "warrior", "hunter", "killer",
         "hello", "world", "hello123", "helloworld",
-        "love", "lovely", "loveme", "i love you",
+        "love", "lovely", "loveme",
         "michael", "jessica", "ashley", "daniel", "thomas",
         "google", "facebook", "twitter", "instagram", "youtube",
         "computer", "internet", "network", "security",
         "0987654321", "9876543210", "1q2w3e4r", "1qaz2wsx",
         "qwe", "qwe123", "rty", "zxcvbnm",
-        "111", "11111", "222", "333", "444", "555",
         "777", "888", "999", "000", "7777777", "8888888",
         "2000", "2001", "2010", "2019", "2020", "2021", "2022", "2023", "2024",
-        "january", "february", "march", "april", "may", "june",
-        "july", "august", "september", "october", "november", "december",
         "spring", "summer", "autumn", "winter",
-        "star", "stars", "moon", "sun", "sky", "earth", "water", "fire",
+        "star", "moon", "sun", "sky", "earth", "water", "fire",
         "red", "blue", "green", "black", "white", "purple", "yellow",
         "cat", "dog", "bird", "fish", "lion", "tiger", "bear", "wolf",
-        "pizza", "burger", "coffee", "beer", "wine", "food",
         "matrix", "hackers", "hacker", "hack", "cyber", "dark",
-        "secret", "hidden", "private", "public", "open", "close",
-        "new", "old", "big", "small", "fast", "slow", "good", "bad",
-        "home", "house", "school", "work", "office",
+        "secret", "hidden", "private", "public",
         "trump", "obama", "putin", "erdogan",
         "pass123", "root123", "admin123", "user123", "test123",
-        "xyz123", "222222", "333333", "444444", "555555",
-        "777777", "888888", "999999",
+        "xyz123", "000000", "111111", "222222", "333333",
+        "444444", "555555", "666666", "777777", "888888", "999999",
         "cyber sentinel", "siber güvenlik", "sentinel", "cybersentinel",
     }
     wordlist_path = os.path.join(base_path, "crypto_wordlist.txt")
@@ -1880,6 +1874,124 @@ def virustotal_scan():
         "output": "\n".join(output_lines)
     })
 
+
+
+@app.route("/api/security/session-cookie", methods=["POST"])
+def session_cookie_analysis():
+    data = request.json or {}
+    target = str(data.get("target") or "").strip()
+    
+    if not target:
+        return jsonify({"error": "Sorgulanacak hedef URL adresi boş bırakılamaz."}), 400
+        
+    if not target.startswith(("http://", "https://")):
+        target = "https://" + target
+        
+    output_lines = [
+        "==================================================",
+        "[+] OTURUM VE ÇEREZ GÜVENLİK ANALİZİ BAŞLATILDI",
+        f"[+] Hedef Web Adresi: {target}",
+        "[+] Çerez (Cookie) Politikaları ve Güvenlik Bayrakları Denetleniyor...",
+        "==================================================\n"
+    ]
+    
+    try:
+        headers = {"User-Agent": "CyberSentinel-Security-Scanner-v1.0"}
+        try:
+            r = requests.head(target, headers=headers, timeout=6, allow_redirects=True)
+            cookies_to_inspect = r.cookies
+        except Exception:
+            r = requests.get(target, headers=headers, timeout=6, allow_redirects=True)
+            cookies_to_inspect = r.cookies
+            
+        cookie_list = []
+        for name, value in cookies_to_inspect.items():
+            cookie_list.append((name, value))
+            
+        if not cookie_list:
+            output_lines.append("[🟢] BİLGİ: Hedef web sunucusu tarafından tarama sırasında herhangi bir çerez (Cookie) tanımlanmadı.")
+            output_lines.append("[+] Bu durum, oturum yönetimi yapılmadığını veya çerezlerin yalnızca oturum açıldıktan sonra atandığını gösterebilir.")
+            output_lines.append("\n[+] Oturum & Çerez Analizi Başarıyla Tamamlandı.")
+            return jsonify({
+                "success": True,
+                "cookies": [],
+                "output": "\n".join(output_lines)
+            })
+            
+        output_lines.append(f"[+] Toplam {len(cookie_list)} adet çerez (Cookie) tespit edildi ve analiz ediliyor:\n")
+        parsed_cookies = []
+        
+        for name, val in cookie_list:
+            cookie_obj = None
+            for cookie in r.cookies:
+                if cookie.name == name:
+                    cookie_obj = cookie
+                    break
+            
+            httponly = False
+            if cookie_obj:
+                httponly = getattr(cookie_obj, "has_nonstandard_attr", lambda x: False)("HttpOnly") or getattr(cookie_obj, "HttpOnly", False)
+                if not httponly and hasattr(cookie_obj, "_rest"):
+                    httponly = any("httponly" in k.lower() for k in cookie_obj._rest.keys())
+            
+            secure = getattr(cookie_obj, "secure", False) if cookie_obj else False
+            
+            samesite = "None"
+            if cookie_obj and hasattr(cookie_obj, "_rest"):
+                for k, v in cookie_obj._rest.items():
+                    if k.lower() == "samesite":
+                        samesite = v or "None"
+                        break
+            
+            output_lines.append(f"🍪 Çerez Adı: {name}")
+            output_lines.append(f"├── 🔐 HttpOnly  : {'EVET (Güvenli) 🟢' if httponly else 'HAYIR (RİSKLİ!) ❌'}")
+            output_lines.append(f"├── 🛡️ Secure    : {'EVET (Güvenli) 🟢' if secure else 'HAYIR (RİSKLİ!) ❌'}")
+            output_lines.append(f"└── 🌐 SameSite  : {samesite}")
+            
+            evaluations = []
+            if not httponly:
+                evaluations.append("[❌] RISK: HttpOnly bayrağı eksik. Bu çerez JavaScript kodları (document.cookie) tarafından okunabilir. Sistemde oluşabilecek bir XSS zafiyetinde oturum bilgisi çalınabilir (Session Hijacking)!")
+            if not secure:
+                evaluations.append("[❌] RISK: Secure bayrağı eksik. Bu çerez şifrelenmemiş (HTTP) bağlantılar üzerinden gönderilebilir. Ağ trafiğini dinleyen bir saldırgan (MitM) oturum kimliğini ele geçirebilir!")
+            if samesite.lower() == "none" and not secure:
+                evaluations.append("[❌] RISK: SameSite=None ayarı Secure bayrağı olmadan çalışmaz ve CSRF saldırılarına karşı koruma sağlamaz.")
+            
+            if not evaluations:
+                evaluations.append("[🟢] Güvenlik Durumu: Çerez bayrakları ideal siber güvenlik standartlarına uygundur.")
+                
+            for ev in evaluations:
+                output_lines.append(f"    {ev}")
+            output_lines.append("")
+            
+            parsed_cookies.append({
+                "name": name,
+                "httponly": bool(httponly),
+                "secure": bool(secure),
+                "samesite": samesite,
+                "issues_count": len(evaluations) if any('RISK' in ev for ev in evaluations) else 0
+            })
+            
+        output_lines.append("[+] Oturum & Çerez Analizi Başarıyla Tamamlandı.")
+        return jsonify({
+            "success": True,
+            "cookies": parsed_cookies,
+            "output": "\n".join(output_lines)
+        })
+        
+    except requests.exceptions.Timeout:
+        output_lines.append("[❌] HATA: Zaman aşımı! Hedef web sunucusu 6 saniye içerisinde yanıt vermedi.")
+        return jsonify({
+            "success": False,
+            "error": "Zaman Aşımı",
+            "output": "\n".join(output_lines)
+        }), 504
+    except Exception as e:
+        output_lines.append(f"[❌] HATA: Web sunucusuna bağlanılamadı. Hata detayı: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "output": "\n".join(output_lines)
+        }), 500
 
 
 @app.route("/api/security/code-scan", methods=["POST"])
