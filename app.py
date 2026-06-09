@@ -2,6 +2,7 @@ import socket
 import subprocess
 import platform
 import concurrent.futures
+import re
 import requests
 import hashlib
 import os
@@ -735,9 +736,129 @@ def stress_scan():
     })
 
 
+_CRYPTO_HASH_CACHE = {}
+_CRYPTO_CACHE_MAX = 500
+_HASH_LENGTHS = {"md5": 32, "sha1": 40, "sha256": 64}
+
+
+def _register_hashed_text(plaintext):
+    """Bu oturumda hashlenen metinleri hızlı kırma için kaydet."""
+    encoded = plaintext.encode("utf-8")
+    hashes = {
+        "md5": hashlib.md5(encoded).hexdigest(),
+        "sha1": hashlib.sha1(encoded).hexdigest(),
+        "sha256": hashlib.sha256(encoded).hexdigest(),
+    }
+    for h_type, h_val in hashes.items():
+        if len(_CRYPTO_HASH_CACHE) >= _CRYPTO_CACHE_MAX:
+            _CRYPTO_HASH_CACHE.pop(next(iter(_CRYPTO_HASH_CACHE)))
+        _CRYPTO_HASH_CACHE[f"{h_type}:{h_val}"] = plaintext
+
+
+def _lookup_cached_hash(hash_type, target_hash):
+    return _CRYPTO_HASH_CACHE.get(f"{hash_type}:{target_hash}")
+
+
+def _is_valid_crack_result(text):
+    """Bulut API yanıtlarındaki hata kodlarını başarılı sonuçtan ayır."""
+    if not text:
+        return False
+    cleaned = text.strip()
+    if not cleaned or len(cleaned) > 128:
+        return False
+    upper = cleaned.upper()
+    invalid_markers = (
+        "HASH_NOT_FOUND", "CODE ERREUR", "ERREUR",
+        "NOT FOUND", "NOTFOUND", "INVALID", "FAILED", "ERROR",
+        "LIMIT", "TOO MANY", "API KEY", "UNAUTHORIZED", "FORBIDDEN",
+        "NULL", "NONE", "EMPTY",
+    )
+    if any(marker in upper for marker in invalid_markers):
+        return False
+    if re.fullmatch(r"[a-f0-9]{32,64}", cleaned.lower()):
+        return False
+    return True
+
+
+def _validate_hash_format(hash_type, target_hash):
+    expected = _HASH_LENGTHS.get(hash_type)
+    if expected is None:
+        return f"Desteklenmeyen hash türü: {hash_type}"
+    if len(target_hash) != expected:
+        return (
+            f"Geçersiz {hash_type.upper()} hash uzunluğu. "
+            f"{expected} karakter bekleniyor, {len(target_hash)} karakter girildi."
+        )
+    if not re.fullmatch(r"[a-f0-9]+", target_hash):
+        return "Hash yalnızca onaltılık (0-9, a-f) karakterler içermelidir."
+    return None
+
+
+def _load_crypto_wordlist():
+    words = {
+        "merhaba", "sifre", "şifre", "parola", "güvenlik", "türkiye", "ankara",
+        "istanbul", "izmir", "antalya", "galatasaray", "fenerbahce", "besiktas",
+        "trabzonspor", "bursaspor", "atatürk", "cumhuriyet", "mustafa", "mehmet",
+        "ayse", "fatma", "ali", "veli", "ahmet", "can", "deniz", "yildiz",
+        "elma", "armut", "masa", "sandalye", "bilgisayar", "telefon", "mobil",
+        "naber", "kanka", "naber kanka", "selam", "dostum", "slm", "mrb",
+        "1234567890", "123456789", "12345678", "1234567", "123456", "12345",
+        "1234", "123", "1111", "111111", "0000", "000000", "9999", "666666",
+        "password", "password1", "password123", "passw0rd",
+        "qwerty", "qwerty123", "qwertyuiop", "asdfgh", "asdfghjkl",
+        "letmein", "welcome", "monkey", "dragon", "master", "baseball",
+        "abc123", "abc", "abcd", "abcdef", "abcdefgh",
+        "admin", "administrator", "root", "toor", "test", "demo",
+        "guest", "user", "login", "pass", "kali", "linux",
+        "sunshine", "shadow", "superman", "batman", "iloveyou",
+        "princess", "football", "soccer", "hockey", "basketball",
+        "ninja", "samurai", "warrior", "hunter", "killer",
+        "hello", "world", "hello123", "helloworld",
+        "love", "lovely", "loveme", "i love you",
+        "michael", "jessica", "ashley", "daniel", "thomas",
+        "google", "facebook", "twitter", "instagram", "youtube",
+        "computer", "internet", "network", "security",
+        "0987654321", "9876543210", "1q2w3e4r", "1qaz2wsx",
+        "qwe", "qwe123", "rty", "zxcvbnm",
+        "111", "11111", "222", "333", "444", "555",
+        "777", "888", "999", "000", "7777777", "8888888",
+        "2000", "2001", "2010", "2019", "2020", "2021", "2022", "2023", "2024",
+        "january", "february", "march", "april", "may", "june",
+        "july", "august", "september", "october", "november", "december",
+        "spring", "summer", "autumn", "winter",
+        "star", "stars", "moon", "sun", "sky", "earth", "water", "fire",
+        "red", "blue", "green", "black", "white", "purple", "yellow",
+        "cat", "dog", "bird", "fish", "lion", "tiger", "bear", "wolf",
+        "pizza", "burger", "coffee", "beer", "wine", "food",
+        "matrix", "hackers", "hacker", "hack", "cyber", "dark",
+        "secret", "hidden", "private", "public", "open", "close",
+        "new", "old", "big", "small", "fast", "slow", "good", "bad",
+        "home", "house", "school", "work", "office",
+        "trump", "obama", "putin", "erdogan",
+        "pass123", "root123", "admin123", "user123", "test123",
+        "xyz123", "222222", "333333", "444444", "555555",
+        "777777", "888888", "999999",
+        "cyber sentinel", "siber güvenlik", "sentinel", "cybersentinel",
+    }
+    wordlist_path = os.path.join(base_path, "crypto_wordlist.txt")
+    if os.path.exists(wordlist_path):
+        try:
+            with open(wordlist_path, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    word = line.strip()
+                    if word:
+                        words.add(word)
+        except Exception as e:
+            print(f"[!] crypto_wordlist.txt okuma hatası: {e}")
+    return words
+
+
 @app.route("/api/crypto/hash", methods=["POST"])
 def crypto_hash():
-    data = request.json.get("target", "")
+    data = str(request.json.get("target") or request.json.get("text") or "")
+    if not data:
+        return jsonify({"error": "Metin boş olamaz."}), 400
+    _register_hashed_text(data)
     return jsonify({
         "md5": hashlib.md5(data.encode()).hexdigest(),
         "sha1": hashlib.sha1(data.encode()).hexdigest(),
@@ -746,29 +867,105 @@ def crypto_hash():
 
 @app.route("/api/crypto/crack", methods=["POST"])
 def crypto_crack():
-    target_hash = request.json.get("target", "").lower()
-    hash_type = request.json.get("type", "md5")
+    data = request.json or {}
+    target_hash = str(data.get("target") or data.get("hash") or "").strip().lower()
+    hash_type = str(data.get("type", "md5")).strip().lower()
     
-    # Yerel mini sözlük
-    wordlist = ["123456", "password", "12345678", "qwerty", "123456789", "12345", "1234", "111111", "1234567", "dragon", "admin", "root", "toor", "test", "demo", "kali", "pass", "qwe"]
-    
-    for word in wordlist:
-        if hash_type == "md5" and hashlib.md5(word.encode()).hexdigest() == target_hash:
-            return jsonify({"cracked": True, "password": word, "method": "Yerel Sözlük (Mini)"})
-        elif hash_type == "sha1" and hashlib.sha1(word.encode()).hexdigest() == target_hash:
-            return jsonify({"cracked": True, "password": word, "method": "Yerel Sözlük (Mini)"})
-        elif hash_type == "sha256" and hashlib.sha256(word.encode()).hexdigest() == target_hash:
-            return jsonify({"cracked": True, "password": word, "method": "Yerel Sözlük (Mini)"})
-            
-    # MD5 için çevrimiçi cloud veritabanını test et
+    if not target_hash:
+        return jsonify({"error": "Kırılacak hash değeri belirtilmedi."}), 400
+
+    format_error = _validate_hash_format(hash_type, target_hash)
+    if format_error:
+        return jsonify({"cracked": False, "error": format_error})
+
+    def check_word(word, h_type, h_val):
+        """Tek bir kelimeyi hash türüne göre kontrol et."""
+        try:
+            encoded = word.encode('utf-8')
+            if h_type == "md5":
+                return hashlib.md5(encoded).hexdigest() == h_val
+            elif h_type == "sha1":
+                return hashlib.sha1(encoded).hexdigest() == h_val
+            elif h_type == "sha256":
+                return hashlib.sha256(encoded).hexdigest() == h_val
+        except:
+            pass
+        return False
+
+    cached_password = _lookup_cached_hash(hash_type, target_hash)
+    if cached_password:
+        return jsonify({
+            "cracked": True,
+            "password": cached_password,
+            "method": "Oturum Hafızası (Bu oturumda hashlenen metin)"
+        })
+
+    # --- 1. AŞAMA: GENİŞLETİLMİŞ YEREL SÖZLÜK ---
+    extended_wordlist = _load_crypto_wordlist()
+    for word in extended_wordlist:
+        if check_word(word, hash_type, target_hash):
+            return jsonify({"cracked": True, "password": word, "method": "Genişletilmiş Yerel Sözlük (Türkçe + İngilizce)"})
+
+    # --- 2. AŞAMA: ROCKYOU.TXT DOSYASINDAN SÖZLÜK SALDIRISI ---
+    rockyou_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rockyou.txt")
+    if os.path.exists(rockyou_path):
+        try:
+            with open(rockyou_path, "r", encoding="latin-1", errors="ignore") as f:
+                for line in f:
+                    word = line.strip()
+                    if word and check_word(word, hash_type, target_hash):
+                        return jsonify({"cracked": True, "password": word, "method": "Rockyou Sözlük Saldırısı"})
+        except Exception as e:
+            print(f"[!] rockyou.txt okuma hatası: {e}")
+
+    # --- 3. AŞAMA: ÇEVRİMİÇİ HASH LOOKUP API'LERİ ---
     if hash_type == "md5":
         try:
-             r = requests.get(f"http://www.nitrxgen.net/md5db/{target_hash}", timeout=3)
-             if r.text and len(r.text) > 0:
-                 return jsonify({"cracked": True, "password": r.text, "method": "Bulut Kırma Veritabanı"})
+            r = requests.get(f"http://www.nitrxgen.net/md5db/{target_hash}", timeout=4)
+            if r.status_code == 200 and _is_valid_crack_result(r.text):
+                return jsonify({"cracked": True, "password": r.text.strip(), "method": "MD5 Bulut Kırma (nitrxgen)"})
+        except: pass
+        try:
+            r = requests.get(
+                f"https://md5decrypt.net/Api/api.php?hash={target_hash}&hash_type=md5&email=cybersent@test.com&code=1a1479a27ce888",
+                timeout=4
+            )
+            if r.status_code == 200 and _is_valid_crack_result(r.text):
+                return jsonify({"cracked": True, "password": r.text.strip(), "method": "MD5 Bulut Kırma (md5decrypt)"})
         except: pass
 
-    return jsonify({"cracked": False, "error": "Şifre kırılamadı. Sözlükte veya veritabanında yok."})
+    if hash_type == "sha1":
+        try:
+            r = requests.get(
+                f"https://md5decrypt.net/Api/api.php?hash={target_hash}&hash_type=sha1&email=cybersent@test.com&code=1a1479a27ce888",
+                timeout=4
+            )
+            if r.status_code == 200 and _is_valid_crack_result(r.text):
+                return jsonify({"cracked": True, "password": r.text.strip(), "method": "SHA1 Bulut Kırma (md5decrypt)"})
+        except: pass
+        try:
+            r = requests.get(
+                f"https://sha1.gromweb.com/?hash={target_hash}",
+                headers={"Accept": "application/json"},
+                timeout=4
+            )
+            if r.status_code == 200:
+                match = re.search(r'<em class="text-detail">([^<]+)</em>', r.text)
+                if match and _is_valid_crack_result(match.group(1)):
+                    return jsonify({"cracked": True, "password": match.group(1), "method": "SHA1 Bulut Kırma (gromweb)"})
+        except: pass
+
+    if hash_type == "sha256":
+        try:
+            r = requests.get(
+                f"https://md5decrypt.net/Api/api.php?hash={target_hash}&hash_type=sha256&email=cybersent@test.com&code=1a1479a27ce888",
+                timeout=4
+            )
+            if r.status_code == 200 and _is_valid_crack_result(r.text):
+                return jsonify({"cracked": True, "password": r.text.strip(), "method": "SHA256 Bulut Kırma (md5decrypt)"})
+        except: pass
+
+    return jsonify({"cracked": False, "error": "Şifre kırılamadı. Genişletilmiş sözlük, rockyou ve bulut veritabanlarında bulunamadı."})
 
 @app.route("/api/scan/mac", methods=["POST"])
 def mac_lookup():
